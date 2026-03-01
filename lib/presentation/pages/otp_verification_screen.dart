@@ -1,48 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_constants.dart';
 import '../widgets/custom_button.dart';
+import '../providers/auth_provider.dart';
+import 'reset_password_screen.dart';
 
-class OtpVerificationScreen extends StatefulWidget {
+class OtpVerificationScreen extends StatelessWidget {
   final String email;
-
   const OtpVerificationScreen({super.key, required this.email});
 
-  @override
-  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
-}
-
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  final List<TextEditingController> _controllers = List.generate(
-    4,
-    (index) => TextEditingController(),
-  );
-  final List<FocusNode> _focusNodes = List.generate(4, (index) => FocusNode());
-
-  @override
-  void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    for (var node in _focusNodes) {
-      node.dispose();
-    }
-    super.dispose();
-  }
-
-  void _verifyOtp() {
-    String otp = _controllers.map((c) => c.text).join();
-    if (otp.length == 4) {
-      // TODO: Implement verify logic
-      // TODO: Implement verify logic
-      // debugPrint('Verifying OTP: $otp');
+  void _handleVerifyOtp(BuildContext context, AuthProvider authProvider) async {
+    final success = await authProvider.verifyOtp(email);
+    if (success) {
+      if (!context.mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ResetPasswordScreen(email: email),
+        ),
+      );
+    } else {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? 'Invalid OTP')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Verification')),
+      appBar: AppBar(
+        title: const Text('Verification'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppColors.black,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -61,22 +57,22 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'We have sent a verification code to ${widget.email}',
+                'We have sent a verification code to $email',
                 style: const TextStyle(fontSize: 16, color: AppColors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(4, (index) {
+                children: List.generate(6, (index) {
                   return SizedBox(
-                    width: 60,
-                    height: 60,
+                    width: 45,
+                    height: 55,
                     child: TextField(
-                      controller: _controllers[index],
-                      focusNode: _focusNodes[index],
+                      controller: authProvider.otpControllers[index],
+                      focusNode: authProvider.otpFocusNodes[index],
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                       keyboardType: TextInputType.number,
@@ -86,24 +82,37 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         FilteringTextInputFormatter.digitsOnly,
                       ],
                       onChanged: (value) {
-                        if (value.isNotEmpty && index < 3) {
-                          _focusNodes[index + 1].requestFocus();
+                        if (value.isNotEmpty && index < 5) {
+                          authProvider.otpFocusNodes[index + 1].requestFocus();
                         } else if (value.isEmpty && index > 0) {
-                          _focusNodes[index - 1].requestFocus();
+                          authProvider.otpFocusNodes[index - 1].requestFocus();
                         }
                       },
                       decoration: InputDecoration(
-                        hintText: '0',
+                        contentPadding: EdgeInsets.zero,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
                   );
                 }),
               ),
-              const SizedBox(height: 32),
-              CustomButton(text: 'Verify', onPressed: _verifyOtp),
+              const SizedBox(height: 48),
+              CustomButton(
+                text: authProvider.isLoading ? 'Verifying...' : 'Verify',
+                onPressed: authProvider.isLoading
+                    ? () {}
+                    : () => _handleVerifyOtp(context, authProvider),
+              ),
             ],
           ),
         ),

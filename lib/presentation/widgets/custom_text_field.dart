@@ -5,6 +5,8 @@ class CustomTextField extends StatelessWidget {
   final String hintText;
   final TextEditingController controller;
   final bool isPassword;
+  final bool obscureText;
+  final VoidCallback? onPasswordToggle;
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
   final Widget? prefixIcon;
@@ -15,6 +17,8 @@ class CustomTextField extends StatelessWidget {
     required this.hintText,
     required this.controller,
     this.isPassword = false,
+    this.obscureText = false,
+    this.onPasswordToggle,
     this.keyboardType = TextInputType.text,
     this.validator,
     this.prefixIcon,
@@ -25,7 +29,7 @@ class CustomTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      obscureText: isPassword,
+      obscureText: isPassword ? obscureText : false,
       keyboardType: keyboardType,
       validator: validator,
       style: const TextStyle(fontSize: 16),
@@ -33,7 +37,17 @@ class CustomTextField extends StatelessWidget {
         hintText: hintText,
         hintStyle: const TextStyle(color: AppColors.grey),
         prefixIcon: prefixIcon,
-        suffixIcon: suffixIcon,
+        suffixIcon: isPassword && onPasswordToggle != null
+            ? IconButton(
+                icon: Icon(
+                  obscureText
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.grey,
+                ),
+                onPressed: onPasswordToggle,
+              )
+            : suffixIcon,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,

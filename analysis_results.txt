@@ -1,0 +1,8 @@
+[error] The method 'signIn' isn't defined for the type 'GoogleSignIn' (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:109:67)
+[error] The getter 'accessToken' isn't defined for the type 'GoogleSignInAuthentication' (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:118:33)
+[info] Uses 'await' on an instance of 'GoogleSignInAuthentication', which is not a subtype of 'Future' (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:114:11)
+[info] Don't invoke 'print' in production code (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:167:7)
+[info] Don't invoke 'print' in production code (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:222:7)
+[info] Don't invoke 'print' in production code (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:242:7)
+[info] Don't invoke 'print' in production code (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:262:7)
+[info] Don't invoke 'print' in production code (c:\company college projects\senior_care_connect\lib\data\repositories\firebase_auth_repository.dart:267:7)

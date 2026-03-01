@@ -1,0 +1,28 @@
+Analyzing firebase_auth_repository.dart...                      
+
+  error - The method 'signIn' isn't defined for the type 'GoogleSignIn' - lib\data\repositories\firebase_auth_repository.dart:109:67 - undefined_method
+   info - Uses 'await' on an instance of 'GoogleSignInAuthentication', which is not a subtype of 'Future' - lib\data\repositories\firebase_auth_repository.dart:114:11 - await_only_futures
+  error - The getter 'accessToken' isn't defined for the type 'GoogleSignInAuthentication' - lib\data\repositories\firebase_auth_repository.dart:118:33 - undefined_getter
+   info - Don't invoke 'print' in production code - lib\data\repositories\firebase_auth_repository.dart:167:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\data\repositories\firebase_auth_repository.dart:222:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\data\repositories\firebase_auth_repository.dart:242:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\data\repositories\firebase_auth_repository.dart:262:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\data\repositories\firebase_auth_repository.dart:267:7 - avoid_print
+
+flutter : 8 issues found. 
+(ran in 1.0s)
+At line:1 char:1
++ flutter analyze lib/data/re
+positories/firebase_auth_repo
+sitory.dart - ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (8 issue  
+  s found. (ran in 1.0s):S   
+ tring) [], RemoteExcepti    
+on
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 

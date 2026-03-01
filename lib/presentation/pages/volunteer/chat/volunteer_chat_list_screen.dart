@@ -60,26 +60,10 @@ class _VolunteerChatListScreenState extends State<VolunteerChatListScreen> {
           'chat',
           style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
         ),
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.only(left: 16),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 20,
-              color: AppColors.black,
-            ),
-            onPressed: () {
-              // Back or navigate
-            },
-          ),
-        ),
       ),
       body: ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 10),

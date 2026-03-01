@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../core/app_constants.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/role_card.dart';
-import 'login_screen.dart'; // Will be created next
+import 'package:app/core/app_constants.dart';
+import 'package:app/presentation/widgets/custom_button.dart';
+import 'package:app/presentation/widgets/role_card.dart';
+import 'package:app/presentation/pages/login_screen.dart';
+import 'package:app/presentation/pages/admin_login_screen.dart';
 
+/// Screen that allow users to select their role (Volunteer, Senior, or Both).
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
 
@@ -24,7 +26,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     if (selectedRole != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (context) => LoginScreen(role: selectedRole),
+        ),
       );
     }
   }
@@ -54,19 +58,27 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               ),
               const SizedBox(height: 40),
               RoleCard(
-                title: 'I am a Caregiver',
-                description: 'Find jobs and care for seniors',
-                icon: Icons.medical_services_outlined,
-                isSelected: selectedRole == 'caregiver',
-                onTap: () => _handleRoleSelection('caregiver'),
+                title: 'I am a Volunteer',
+                description: 'Offer support and help seniors in need',
+                imagePath: 'assets/images/caregiver.png',
+                isSelected: selectedRole == 'volunteer',
+                onTap: () => _handleRoleSelection('volunteer'),
               ),
               const SizedBox(height: 16),
               RoleCard(
                 title: 'I am a Senior',
-                description: 'Find caregivers and get assistance',
-                icon: Icons.elderly,
+                description: 'Request assistance and find support',
+                imagePath: 'assets/images/senior.png',
                 isSelected: selectedRole == 'senior',
                 onTap: () => _handleRoleSelection('senior'),
+              ),
+              const SizedBox(height: 16),
+              RoleCard(
+                title: 'I am Both',
+                description: 'I want to both help and receive support',
+                imagePath: 'assets/images/group.png',
+                isSelected: selectedRole == 'both',
+                onTap: () => _handleRoleSelection('both'),
               ),
               const Spacer(),
               CustomButton(
@@ -80,6 +92,26 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     : Colors.grey.shade600,
               ),
               const SizedBox(height: 20),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminLoginScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Login as Admin',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
             ],
           ),
         ),

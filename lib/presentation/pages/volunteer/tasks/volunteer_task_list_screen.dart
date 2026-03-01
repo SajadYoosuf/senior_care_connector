@@ -76,23 +76,7 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.only(left: 16),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 20,
-              color: AppColors.black,
-            ),
-            onPressed: () {
-              // Handle back logic or if it's a main tab, maybe nothing or switch tab
-            },
-          ),
-        ),
+        automaticallyImplyLeading: false,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(

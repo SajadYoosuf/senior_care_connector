@@ -13,19 +13,135 @@ class AuthProvider extends ChangeNotifier {
   UserEntity? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-
   bool get isAuthenticated => _user != null;
 
-  Future<bool> login(String email, String password) async {
+  // --- Visibility States ---
+  bool _isLoginPasswordVisible = false;
+  bool get isLoginPasswordVisible => _isLoginPasswordVisible;
+
+  bool _isSignUpPasswordVisible = false;
+  bool get isSignUpPasswordVisible => _isSignUpPasswordVisible;
+
+  bool _isSignUpConfirmPasswordVisible = false;
+  bool get isSignUpConfirmPasswordVisible => _isSignUpConfirmPasswordVisible;
+
+  bool _isResetPasswordVisible = false;
+  bool get isResetPasswordVisible => _isResetPasswordVisible;
+
+  bool _isResetConfirmPasswordVisible = false;
+  bool get isResetConfirmPasswordVisible => _isResetConfirmPasswordVisible;
+
+  void toggleLoginPasswordVisibility() {
+    _isLoginPasswordVisible = !_isLoginPasswordVisible;
+    notifyListeners();
+  }
+
+  void toggleSignUpPasswordVisibility() {
+    _isSignUpPasswordVisible = !_isSignUpPasswordVisible;
+    notifyListeners();
+  }
+
+  void toggleSignUpConfirmPasswordVisibility() {
+    _isSignUpConfirmPasswordVisible = !_isSignUpConfirmPasswordVisible;
+    notifyListeners();
+  }
+
+  void toggleResetPasswordVisibility() {
+    _isResetPasswordVisible = !_isResetPasswordVisible;
+    notifyListeners();
+  }
+
+  void toggleResetConfirmPasswordVisibility() {
+    _isResetConfirmPasswordVisible = !_isResetConfirmPasswordVisible;
+    notifyListeners();
+  }
+
+  // --- Login Controllers ---
+  final loginEmailController = TextEditingController();
+  final loginPasswordController = TextEditingController();
+  final loginFormKey = GlobalKey<FormState>();
+
+  // --- Sign Up Controllers ---
+  final signUpNameController = TextEditingController();
+  final signUpEmailController = TextEditingController();
+  final signUpPasswordController = TextEditingController();
+  final signUpConfirmPasswordController = TextEditingController();
+  final signUpFormKey = GlobalKey<FormState>();
+
+  // --- Forgot Password Controllers ---
+  final forgotEmailController = TextEditingController();
+  final forgotFormKey = GlobalKey<FormState>();
+
+  // --- OTP Verification Controllers ---
+  final otpControllers = List.generate(6, (index) => TextEditingController());
+  final otpFocusNodes = List.generate(6, (index) => FocusNode());
+
+  // --- Reset Password Controllers ---
+  final resetCurrentPasswordController = TextEditingController();
+  final resetPasswordController = TextEditingController();
+  final resetConfirmPasswordController = TextEditingController();
+  final resetFormKey = GlobalKey<FormState>();
+
+  bool _isResetCurrentPasswordVisible = false;
+  bool get isResetCurrentPasswordVisible => _isResetCurrentPasswordVisible;
+
+  void toggleResetCurrentPasswordVisibility() {
+    _isResetCurrentPasswordVisible = !_isResetCurrentPasswordVisible;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    loginEmailController.dispose();
+    loginPasswordController.dispose();
+    signUpNameController.dispose();
+    signUpEmailController.dispose();
+    signUpPasswordController.dispose();
+    signUpConfirmPasswordController.dispose();
+    forgotEmailController.dispose();
+    for (var c in otpControllers) {
+      c.dispose();
+    }
+    for (var n in otpFocusNodes) {
+      n.dispose();
+    }
+    resetPasswordController.dispose();
+    resetConfirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void clearControllers() {
+    loginEmailController.clear();
+    loginPasswordController.clear();
+    signUpNameController.clear();
+    signUpEmailController.clear();
+    signUpPasswordController.clear();
+    signUpConfirmPasswordController.clear();
+    forgotEmailController.clear();
+    for (var c in otpControllers) {
+      c.clear();
+    }
+    resetPasswordController.clear();
+    resetConfirmPasswordController.clear();
+  }
+
+  Future<bool> login(String? selectedRole) async {
+    if (!loginFormKey.currentState!.validate()) return false;
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final user = await _authRepository.login(email, password);
+      final user = await _authRepository.login(
+        loginEmailController.text.trim(),
+        loginPasswordController.text.trim(),
+        selectedRole: selectedRole,
+      );
       if (user != null) {
         _user = user;
         _isLoading = false;
+        clearControllers();
         notifyListeners();
         return true;
       } else {
@@ -42,21 +158,24 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> signUp(
-    String name,
-    String email,
-    String password,
-    String role,
-  ) async {
+  Future<bool> signUp(String role) async {
+    if (!signUpFormKey.currentState!.validate()) return false;
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final user = await _authRepository.signUp(name, email, password, role);
+      final user = await _authRepository.signUp(
+        signUpNameController.text.trim(),
+        signUpEmailController.text.trim(),
+        signUpPasswordController.text.trim(),
+        role,
+      );
       if (user != null) {
         _user = user;
         _isLoading = false;
+        clearControllers();
         notifyListeners();
         return true;
       } else {
@@ -73,6 +192,99 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> sendOtp() async {
+    if (!forgotFormKey.currentState!.validate()) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _authRepository.sendPasswordResetOtp(
+        forgotEmailController.text.trim(),
+      );
+      _isLoading = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> verifyOtp(String email) async {
+    String otp = otpControllers.map((c) => c.text).join();
+    if (otp.length != 6) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final isValid = await _authRepository.verifyOtp(email, otp);
+      _isLoading = false;
+      notifyListeners();
+      return isValid;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword(String email) async {
+    if (!resetFormKey.currentState!.validate()) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _authRepository.updatePassword(
+        email,
+        resetPasswordController.text.trim(),
+      );
+      _isLoading = false;
+      if (success) {
+        clearControllers();
+      }
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _authRepository.changePassword(
+        currentPassword,
+        newPassword,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
@@ -80,5 +292,32 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<bool> signInWithGoogle(String role) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final user = await _authRepository.signInWithGoogle(role);
+      if (user != null) {
+        _user = user;
+        _isLoading = false;
+        clearControllers();
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = 'Google sign in failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'An error occurred. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 }

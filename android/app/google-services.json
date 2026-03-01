@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "56232375916",
+    "project_id": "senior-care-management",
+    "storage_bucket": "senior-care-management.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:56232375916:android:8814f588237e19b3e4ca49",
+        "android_client_info": {
+          "package_name": "com.example.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "56232375916-sifutbb3eli3tsr5ec1jtod5d1kr19ki.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKFpfWkd4aKLLHRpbbpMImFf1U0PcDqps"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "56232375916-sifutbb3eli3tsr5ec1jtod5d1kr19ki.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "56232375916-1101b5c87101megjrm005d6355t4c02j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

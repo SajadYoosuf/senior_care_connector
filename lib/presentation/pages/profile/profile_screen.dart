@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/app_constants.dart';
+import '../role_selection_screen.dart';
+import '../../providers/auth_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -117,8 +120,17 @@ class ProfileScreen extends StatelessWidget {
             _buildProfileOption(
               icon: Icons.logout,
               title: 'Log Out',
-              onTap: () {
-                // Logout logic
+              onTap: () async {
+                final authProvider = context.read<AuthProvider>();
+                await authProvider.logout();
+                if (!context.mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RoleSelectionScreen(),
+                  ),
+                  (route) => false,
+                );
               },
             ),
           ],

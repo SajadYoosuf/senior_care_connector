@@ -1,35 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_constants.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'sign_up_screen.dart';
-import 'forgot_password_screen.dart'; // Will be created
+import 'admin_login_screen.dart';
+import 'forgot_password_screen.dart';
 import 'main_screen.dart';
 import 'volunteer/volunteer_main_screen.dart';
+import '../providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   final String? role;
   const LoginScreen({super.key, this.role});
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      if (widget.role == 'caregiver') {
+  void _handleLogin(BuildContext context, AuthProvider authProvider) async {
+    final success = await authProvider.login(role);
+    if (success) {
+      if (!context.mounted) return;
+      final user = authProvider.user;
+      if (user?.role == 'volunteer' || user?.role == 'both') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const VolunteerMainScreen()),
@@ -40,22 +30,30 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const MainScreen()),
         );
       }
+    } else {
+      if (!context.mounted) return;
+      if (authProvider.errorMessage != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(authProvider.errorMessage!)));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.loginTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
-            key: _formKey,
+            key: authProvider.loginFormKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
+                const SizedBox(height: 80),
                 const Text(
                   'Welcome Back!',
                   style: TextStyle(
@@ -74,32 +72,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 48),
                 CustomTextField(
                   hintText: 'Email Address',
-                  controller: _emailController,
+                  controller: authProvider.loginEmailController,
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: const Icon(
                     Icons.email_outlined,
                     color: AppColors.grey,
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your email';
-                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
                   hintText: 'Password',
-                  controller: _passwordController,
+                  controller: authProvider.loginPasswordController,
                   isPassword: true,
+                  obscureText: !authProvider.isLoginPasswordVisible,
+                  onPasswordToggle: authProvider.toggleLoginPasswordVisibility,
                   prefixIcon: const Icon(
                     Icons.lock_outline,
                     color: AppColors.grey,
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your password';
-                    }
                     return null;
                   },
                 ),
@@ -117,8 +115,64 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text('Forgot Password?'),
                   ),
                 ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Or continue with',
+                        style: TextStyle(color: AppColors.grey, fontSize: 14),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                  ],
+                ),
                 const SizedBox(height: 24),
-                CustomButton(text: 'Sign In', onPressed: _login),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _socialLoginButton(
+                      imagePath: 'assets/images/google_logo.png',
+                      onTap: () async {
+                        final success = await authProvider.signInWithGoogle(
+                          role ?? 'volunteer',
+                        );
+                        if (success) {
+                          if (!context.mounted) return;
+                          final user = authProvider.user;
+                          if (user?.role == 'volunteer' ||
+                              user?.role == 'both') {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const VolunteerMainScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          } else {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const MainScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                CustomButton(
+                  text: authProvider.isLoading ? 'Signing In...' : 'Sign In',
+                  onPressed: authProvider.isLoading
+                      ? () {}
+                      : () => _handleLogin(context, authProvider),
+                ),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -132,7 +186,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const SignUpScreen(),
+                            builder: (context) =>
+                                SignUpScreen(role: role ?? 'volunteer'),
                           ),
                         );
                       },
@@ -146,10 +201,55 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminLoginScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Login as Admin',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _socialLoginButton({
+    required String imagePath,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Image.asset(imagePath, height: 24, width: 24),
       ),
     );
   }

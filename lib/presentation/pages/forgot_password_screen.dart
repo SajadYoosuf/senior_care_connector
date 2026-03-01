@@ -1,35 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_constants.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
-import 'otp_verification_screen.dart'; // Will be created next
+import '../providers/auth_provider.dart';
+import 'otp_verification_screen.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
 
-  @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _emailController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  void _resetPassword() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement forgot password logic
-      // Navigate to OTP screen
+  void _handleSendOtp(BuildContext context, AuthProvider authProvider) async {
+    final success = await authProvider.sendOtp();
+    if (success) {
+      if (!context.mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              const OtpVerificationScreen(email: 'test@example.com'),
+          builder: (context) => OtpVerificationScreen(
+            email: authProvider.forgotEmailController.text.trim(),
+          ),
+        ),
+      );
+    } else {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Failed to send OTP'),
         ),
       );
     }
@@ -37,52 +33,59 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Forgot Password')),
+      appBar: AppBar(
+        title: const Text('Forgot Password'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.black,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
-            key: _formKey,
+            key: authProvider.forgotFormKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
+                const Icon(
+                  Icons.lock_reset,
+                  size: 80,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 32),
                 const Text(
                   'Reset Password',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.black,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 const Text(
-                  'Enter the email associated with your account and we\'ll send an email with instructions to reset your password.',
-                  style: TextStyle(fontSize: 16, color: AppColors.grey),
+                  'Enter your email address to receive a 6-digit verification code',
+                  style: TextStyle(color: AppColors.grey),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 40),
                 CustomTextField(
                   hintText: 'Email Address',
-                  controller: _emailController,
+                  controller: authProvider.forgotEmailController,
                   keyboardType: TextInputType.emailAddress,
-                  prefixIcon: const Icon(
-                    Icons.email_outlined,
-                    color: AppColors.grey,
-                  ),
+                  prefixIcon: const Icon(Icons.email_outlined),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
+                    if (value == null || value.isEmpty)
+                      return 'Please enter email';
                     return null;
                   },
                 ),
                 const SizedBox(height: 32),
                 CustomButton(
-                  text: 'Send Instructions',
-                  onPressed: _resetPassword,
+                  text: authProvider.isLoading ? 'Sending...' : 'Send OTP',
+                  onPressed: authProvider.isLoading
+                      ? () {}
+                      : () => _handleSendOtp(context, authProvider),
                 ),
               ],
             ),

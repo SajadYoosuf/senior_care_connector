@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/app_constants.dart';
-import '../../login_screen.dart';
+import '../../role_selection_screen.dart';
+import '../../../providers/auth_provider.dart';
 
 class VolunteerProfileScreen extends StatelessWidget {
   const VolunteerProfileScreen({super.key});
@@ -21,24 +23,7 @@ class VolunteerProfileScreen extends StatelessWidget {
             fontSize: 18,
           ),
         ),
-        leading: Container(
-          margin: const EdgeInsets.only(left: 16),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 20,
-              color: AppColors.black,
-            ),
-            onPressed: () {
-              // If it's a tab, maybe we don't need back, but per design:
-              // Navigator.pop(context);
-            },
-          ),
-        ),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             onPressed: () {},
@@ -139,11 +124,14 @@ class VolunteerProfileScreen extends StatelessWidget {
                   _buildMenuItem(
                     icon: Icons.logout,
                     text: 'Log Out',
-                    onTap: () {
+                    onTap: () async {
+                      final authProvider = context.read<AuthProvider>();
+                      await authProvider.logout();
+                      if (!context.mounted) return;
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                          builder: (context) => const RoleSelectionScreen(),
                         ),
                         (route) => false,
                       );
