@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -7,6 +9,75 @@ class AuthProvider extends ChangeNotifier {
   UserEntity? _user;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isOnline = true;
+  bool get isOnline => _isOnline;
+
+  Future<void> toggleOnlineStatus() async {
+    _isOnline = !_isOnline;
+    notifyListeners();
+
+    if (_user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_user!.id)
+            .update({'isOnline': _isOnline});
+
+        // Refresh local user state
+        _user = UserEntity(
+          id: _user!.id,
+          email: _user!.email,
+          name: _user!.name,
+          role: _user!.role,
+          gender: _user!.gender,
+          isOnline: _isOnline,
+          latitude: _user!.latitude,
+          longitude: _user!.longitude,
+          points: _user!.points,
+          completedTasks: _user!.completedTasks,
+          badge: _user!.badge,
+        );
+      } catch (e) {
+        debugPrint('Error updating online status: $e');
+      }
+    }
+  }
+
+  Future<void> updateLocation() async {
+    if (!_isOnline || _user == null) return;
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.id)
+          .update({
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'lastLocationUpdate': FieldValue.serverTimestamp(),
+          });
+
+      _user = UserEntity(
+        id: _user!.id,
+        email: _user!.email,
+        name: _user!.name,
+        role: _user!.role,
+        gender: _user!.gender,
+        isOnline: _isOnline,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        points: _user!.points,
+        completedTasks: _user!.completedTasks,
+        badge: _user!.badge,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating location: $e');
+    }
+  }
 
   AuthProvider(this._authRepository);
 
@@ -14,6 +85,21 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
+
+  Future<void> loadCurrentUser() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        _user = user;
+      }
+    } catch (e) {
+      debugPrint('Error loading current user: $e');
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
 
   // --- Visibility States ---
   bool _isLoginPasswordVisible = false;
@@ -66,7 +152,14 @@ class AuthProvider extends ChangeNotifier {
   final signUpEmailController = TextEditingController();
   final signUpPasswordController = TextEditingController();
   final signUpConfirmPasswordController = TextEditingController();
+  String _signUpGender = 'Male';
+  String get signUpGender => _signUpGender;
   final signUpFormKey = GlobalKey<FormState>();
+
+  void setSignUpGender(String gender) {
+    _signUpGender = gender;
+    notifyListeners();
+  }
 
   // --- Forgot Password Controllers ---
   final forgotEmailController = TextEditingController();
@@ -171,6 +264,7 @@ class AuthProvider extends ChangeNotifier {
         signUpEmailController.text.trim(),
         signUpPasswordController.text.trim(),
         role,
+        _signUpGender,
       );
       if (user != null) {
         _user = user;
@@ -294,7 +388,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> signInWithGoogle(String role) async {
+  Future<bool> signInWithGoogle([String? role]) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -316,6 +410,55 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'An error occurred. Please try again.';
       _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateUserRole(String role) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _authRepository.updateUserRole(role);
+      if (_user != null) {
+        _user = UserEntity(
+          id: _user!.id,
+          name: _user!.name,
+          email: _user!.email,
+          role: role,
+          gender: _user!.gender,
+        );
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateUserProfile({String? name, String? gender}) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _authRepository.updateUserProfile(name: name, gender: gender);
+      if (_user != null) {
+        _user = UserEntity(
+          id: _user!.id,
+          name: name ?? _user!.name,
+          email: _user!.email,
+          role: _user!.role,
+          gender: gender ?? _user!.gender,
+        );
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = 'Failed to update profile';
       notifyListeners();
       return false;
     }

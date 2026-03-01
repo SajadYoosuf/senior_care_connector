@@ -11,12 +11,15 @@ abstract class AuthRepository {
     String email,
     String password,
     String role,
+    String gender,
   );
-  Future<UserEntity?> signInWithGoogle(String role);
+  Future<void> updateUserProfile({String? name, String? gender});
+  Future<UserEntity?> signInWithGoogle([String? role]);
   Future<void> logout();
   Future<UserEntity?> getCurrentUser();
   Future<bool> sendPasswordResetOtp(String email);
   Future<bool> verifyOtp(String email, String otp);
   Future<bool> updatePassword(String email, String newPassword);
   Future<bool> changePassword(String currentPassword, String newPassword);
+  Future<void> updateUserRole(String role);
 }

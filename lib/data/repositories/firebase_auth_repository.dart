@@ -43,6 +43,7 @@ class FirebaseAuthRepository implements AuthRepository {
             email: email,
             name: data['name'] ?? '',
             role: userRole,
+            gender: data['gender'] ?? '',
           );
 
           final prefs = await SharedPreferences.getInstance();
@@ -68,6 +69,7 @@ class FirebaseAuthRepository implements AuthRepository {
     String email,
     String password,
     String role,
+    String gender,
   ) async {
     try {
       final UserCredential credential = await _firebaseAuth
@@ -79,12 +81,14 @@ class FirebaseAuthRepository implements AuthRepository {
           email: email,
           name: name,
           role: role,
+          gender: gender,
         );
 
         await _firestore.collection('users').doc(user.id).set({
           'name': name,
           'email': email,
           'role': role,
+          'gender': gender,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
@@ -102,7 +106,21 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<UserEntity?> signInWithGoogle(String role) async {
+  Future<void> updateUserProfile({String? name, String? gender}) async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      final Map<String, dynamic> updates = {};
+      if (name != null) updates['name'] = name;
+      if (gender != null) updates['gender'] = gender;
+
+      if (updates.isNotEmpty) {
+        await _firestore.collection('users').doc(user.uid).update(updates);
+      }
+    }
+  }
+
+  @override
+  Future<UserEntity?> signInWithGoogle([String? role]) async {
     try {
       // 1. Initialize for v7+ (Uses Google Identity Services)
       await _googleSignIn.initialize(
@@ -132,22 +150,23 @@ class FirebaseAuthRepository implements AuthRepository {
         final userId = userCredential.user!.uid;
         final doc = await _firestore.collection('users').doc(userId).get();
 
-        String finalRole = role;
+        String finalRole = role ?? '';
         String name = userCredential.user!.displayName ?? '';
         String email = userCredential.user!.email ?? '';
 
         if (!doc.exists) {
-          // New User - Create document
+          // New User - Create document with optional role
           await _firestore.collection('users').doc(userId).set({
             'name': name,
             'email': email,
-            'role': role,
+            'role': role ?? '', // Role might be picked later
             'createdAt': FieldValue.serverTimestamp(),
           });
+          finalRole = role ?? '';
         } else {
           // Existing User
           final data = doc.data() as Map<String, dynamic>;
-          finalRole = data['role'] ?? role;
+          finalRole = data['role'] ?? '';
           name = data['name'] ?? name;
           email = data['email'] ?? email;
         }
@@ -157,6 +176,9 @@ class FirebaseAuthRepository implements AuthRepository {
           email: email,
           name: name,
           role: finalRole,
+          gender: doc.exists
+              ? (doc.data() as Map<String, dynamic>)['gender'] ?? ''
+              : '',
         );
 
         // Persist session
@@ -192,11 +214,17 @@ class FirebaseAuthRepository implements AuthRepository {
           .get();
       if (doc.exists) {
         final data = doc.data()!;
+        final role = data['role'] ?? '';
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userRole', role);
+
         return UserEntity(
           id: firebaseUser.uid,
           email: firebaseUser.email!,
           name: data['name'] ?? '',
-          role: data['role'] ?? '',
+          role: role,
+          gender: data['gender'] ?? '',
         );
       }
     }
@@ -286,6 +314,16 @@ class FirebaseAuthRepository implements AuthRepository {
     } catch (e) {
       print('Error changing password: $e');
       return false;
+    }
+  }
+
+  @override
+  Future<void> updateUserRole(String role) async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).update({'role': role});
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userRole', role);
     }
   }
 }

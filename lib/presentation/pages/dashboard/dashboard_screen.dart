@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/app_constants.dart';
-import 'request_help_screen.dart';
+import '../../../core/app_localizations.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../volunteers/volunteers_screen.dart';
+import 'request_help_screen.dart';
 import '../tasks/task_list_screen.dart';
+import '../notifications/notification_screen.dart';
+import '../medicine/medicine_reminder_screen.dart';
+import '../requests/current_requests_screen.dart';
+import 'package:geolocator/geolocator.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -20,45 +29,82 @@ class DashboardScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundImage: NetworkImage(
-                          'https://i.pravatar.cc/150?img=11',
-                        ), // Placeholder
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const Text(
-                            'Phillip Lipshutz', // Hardcoded for now
-                            style: TextStyle(
-                              fontSize: 18,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          child: Text(
+                            context
+                                        .watch<AuthProvider>()
+                                        .user
+                                        ?.name
+                                        .isNotEmpty ==
+                                    true
+                                ? context
+                                      .watch<AuthProvider>()
+                                      .user!
+                                      .name[0]
+                                      .toUpperCase()
+                                : '👴',
+                            style: const TextStyle(
+                              color: AppColors.primary,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.black,
+                              fontSize: 20,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(context).welcomeBack,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                context
+                                            .watch<AuthProvider>()
+                                            .user
+                                            ?.name
+                                            .isNotEmpty ==
+                                        true
+                                    ? context.watch<AuthProvider>().user!.name
+                                    : 'User',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.black,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () => _showLanguageBottomSheet(context),
                         icon: const Icon(Icons.language),
                       ),
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationScreen(),
+                            ),
+                          );
+                        },
                         icon: const Icon(Icons.notifications_outlined),
                       ),
                     ],
@@ -71,9 +117,9 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               // Action Grid Title
-              const Text(
-                'How we can help today ?',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context).howCanWeHelp,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.black,
@@ -92,8 +138,8 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   _buildActionCard(
                     context,
-                    title: 'Request Help',
-                    subtitle: 'Post a new need for the community',
+                    title: AppLocalizations.of(context).currentRequests,
+                    subtitle: AppLocalizations.of(context).activePastRequests,
                     icon: Icons.volunteer_activism,
                     color: Colors.blue.shade50,
                     iconColor: Colors.blue,
@@ -101,15 +147,15 @@ class DashboardScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const RequestHelpScreen(),
+                          builder: (context) => const CurrentRequestsScreen(),
                         ),
                       );
                     },
                   ),
                   _buildActionCard(
                     context,
-                    title: 'Find your task',
-                    subtitle: 'Browse local needs and helps',
+                    title: AppLocalizations.of(context).myTasks,
+                    subtitle: AppLocalizations.of(context).myTasksSub,
                     icon: Icons.assignment_outlined,
                     color: Colors.green.shade50,
                     iconColor: Colors.green,
@@ -124,8 +170,8 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   _buildActionCard(
                     context,
-                    title: 'Volunteers',
-                    subtitle: 'Manage your connections',
+                    title: AppLocalizations.of(context).findVolunteers,
+                    subtitle: AppLocalizations.of(context).findVolunteersSub,
                     icon: Icons.people_outline,
                     color: Colors.orange.shade50,
                     iconColor: Colors.orange,
@@ -140,15 +186,24 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   _buildActionCard(
                     context,
-                    title: 'Alerts',
-                    subtitle: 'Check your latest updates',
-                    icon: Icons.notifications_active_outlined,
-                    color: Colors.purple.shade50,
-                    iconColor: Colors.purple,
-                    onTap: () {},
+                    title: AppLocalizations.of(context).medicineReminder,
+                    subtitle: AppLocalizations.of(context).dontMissPills,
+                    icon: Icons.medical_services_outlined,
+                    color: Colors.pink.shade50,
+                    iconColor: Colors.pink,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MedicineReminderScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
+              const SizedBox(height: 32),
+
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -161,17 +216,88 @@ class DashboardScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {},
-                  child: const Row(
+                  onPressed: () async {
+                    try {
+                      final user = context.read<AuthProvider>().user;
+                      if (user == null) return;
+
+                      // Show loading snackbar
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            AppLocalizations.of(context).sendingSOS,
+                          ),
+                        ),
+                      );
+
+                      // Check permissions
+                      LocationPermission permission =
+                          await Geolocator.checkPermission();
+                      if (permission == LocationPermission.denied) {
+                        permission = await Geolocator.requestPermission();
+                        if (permission == LocationPermission.denied) {
+                          return;
+                        }
+                      }
+
+                      Position? position;
+                      try {
+                        position = await Geolocator.getCurrentPosition(
+                          desiredAccuracy: LocationAccuracy.high,
+                        );
+                      } catch (e) {
+                        // Ignored
+                      }
+
+                      await FirebaseFirestore.instance
+                          .collection('sos_alerts')
+                          .add({
+                            'userId': user.id,
+                            'userName': user.name,
+                            if (position != null) 'latitude': position.latitude,
+                            if (position != null)
+                              'longitude': position.longitude,
+                            'status': 'Active',
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              AppLocalizations.of(context).sosSentMessage,
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${AppLocalizations.of(context).errorSendingSOS}: $e',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.phone_in_talk),
-                      SizedBox(width: 8),
-                      Text(
-                        'EMERGENCY ASSISTANCE',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      const Icon(Icons.phone_in_talk, size: 20),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          AppLocalizations.of(context).emergencyAssistance,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],
@@ -182,6 +308,103 @@ class DashboardScreen extends StatelessWidget {
           ),
         ),
       ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 150.0),
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RequestHelpScreen(),
+              ),
+            );
+          },
+          backgroundColor: AppColors.primary,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: Text(
+            AppLocalizations.of(context).requestHelp,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final List<Map<String, String>> languages = [
+          {'name': 'English', 'code': 'en', 'flag': '🇺🇸'},
+          {'name': 'Malayalam', 'code': 'ml', 'flag': '🇮🇳'},
+          {'name': 'Tamil', 'code': 'ta', 'flag': '🇮🇳'},
+          {'name': 'Hindi', 'code': 'hi', 'flag': '🇮🇳'},
+        ];
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppLocalizations.of(context).selectLanguage,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: languages.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final lang = languages[index];
+                  return Consumer<LocaleProvider>(
+                    builder: (context, localeProvider, _) {
+                      final isSelected =
+                          localeProvider.locale.languageCode == lang['code'];
+                      return ListTile(
+                        leading: Text(
+                          lang['flag']!,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        title: Text(
+                          lang['name']!,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.black,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(
+                                Icons.check_circle,
+                                color: AppColors.primary,
+                              )
+                            : null,
+                        onTap: () {
+                          localeProvider.setLocale(Locale(lang['code']!));
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -218,21 +441,23 @@ class DashboardScreen extends StatelessWidget {
                 color: color,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: iconColor, size: 32),
+              child: Icon(icon, color: iconColor, size: 28),
             ),
             const Spacer(),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.black,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),

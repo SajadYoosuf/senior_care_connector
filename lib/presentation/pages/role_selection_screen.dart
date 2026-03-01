@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:app/core/app_constants.dart';
 import 'package:app/presentation/widgets/custom_button.dart';
 import 'package:app/presentation/widgets/role_card.dart';
-import 'package:app/presentation/pages/login_screen.dart';
+import 'package:app/presentation/pages/sign_up_screen.dart';
+import 'package:app/presentation/pages/main_screen.dart';
+import 'package:app/presentation/pages/volunteer/volunteer_main_screen.dart';
 import 'package:app/presentation/pages/admin_login_screen.dart';
+import 'package:app/presentation/providers/auth_provider.dart';
 
 /// Screen that allow users to select their role (Volunteer, Senior, or Both).
 class RoleSelectionScreen extends StatefulWidget {
-  const RoleSelectionScreen({super.key});
+  final bool isPostAuth;
+  const RoleSelectionScreen({super.key, this.isPostAuth = false});
 
   @override
   State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
@@ -22,14 +27,37 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     });
   }
 
-  void _continue() {
+  void _continue() async {
     if (selectedRole != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => LoginScreen(role: selectedRole),
-        ),
-      );
+      if (widget.isPostAuth) {
+        final authProvider = context.read<AuthProvider>();
+        final success = await authProvider.updateUserRole(selectedRole!);
+        if (success) {
+          if (!mounted) return;
+          // After updating role, navigate to respective home
+          if (selectedRole == 'volunteer' || selectedRole == 'both') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VolunteerMainScreen(),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainScreen()),
+            );
+          }
+        }
+      } else {
+        // Pre-auth (Standard Sign Up path)
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SignUpScreen(role: selectedRole!),
+          ),
+        );
+      }
     }
   }
 

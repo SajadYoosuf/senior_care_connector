@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/app_constants.dart';
 import '../../../domain/entities/volunteer_entity.dart';
-import '../../../data/repositories/mock_volunteer_repository.dart';
+
 import '../../widgets/volunteer_card.dart';
 
 class VolunteersScreen extends StatefulWidget {
@@ -12,7 +12,6 @@ class VolunteersScreen extends StatefulWidget {
 }
 
 class _VolunteersScreenState extends State<VolunteersScreen> {
-  final MockVolunteerRepository _repository = MockVolunteerRepository();
   List<VolunteerEntity> _volunteers = [];
   bool _isLoading = true;
   String _selectedFilter = 'All';
@@ -27,10 +26,9 @@ class _VolunteersScreenState extends State<VolunteersScreen> {
   }
 
   Future<void> _loadVolunteers() async {
-    final volunteers = await _repository.getVolunteers();
     if (mounted) {
       setState(() {
-        _volunteers = volunteers;
+        _volunteers = [];
         _isLoading = false;
       });
     }
@@ -146,6 +144,16 @@ class _VolunteersScreenState extends State<VolunteersScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
+                : _volunteers.isEmpty
+                ? Center(
+                    child: Text(
+                      'No active volunteers found.',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: _volunteers.length,

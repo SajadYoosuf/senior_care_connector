@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/app_constants.dart';
+import '../../../../core/app_localizations.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/locale_provider.dart';
 import '../tasks/volunteer_task_list_screen.dart';
+import '../../notifications/notification_screen.dart';
 
 class VolunteerDashboardScreen extends StatelessWidget {
   const VolunteerDashboardScreen({super.key});
@@ -9,107 +14,200 @@ class VolunteerDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      appBar: AppBar(
+        backgroundColor: Colors.grey.shade50,
+        toolbarHeight: 70,
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: Colors.blue.shade50,
+              child: Text(
+                context.watch<AuthProvider>().user?.name.isNotEmpty == true
+                    ? context.watch<AuthProvider>().user!.name[0].toUpperCase()
+                    : 'V',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundImage: NetworkImage(
-                          'https://i.pravatar.cc/150?img=12', // Different mock user
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const Text(
-                            'Corey Dorwart',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  Text(
+                    AppLocalizations.of(context).welcomeBack,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Row(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon(
-                            Icons.search,
-                            color: AppColors.black,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon(
-                            Icons.notifications_outlined,
-                            color: AppColors.black,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    context.watch<AuthProvider>().user?.name.isNotEmpty == true
+                        ? context.watch<AuthProvider>().user!.name
+                        : 'Volunteer',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.black,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-
+            ),
+          ],
+        ),
+        actions: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: IconButton(
+              onPressed: () => _showLanguageBottomSheet(context),
+              icon: const Icon(
+                Icons.language,
+                color: AppColors.black,
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.notifications_outlined,
+                color: AppColors.black,
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 20),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade100),
+                top: BorderSide(color: Colors.grey.shade100),
+              ),
+            ),
+            child: Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: auth.isOnline ? Colors.green : Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          auth.isOnline
+                              ? AppLocalizations.of(context).online
+                              : AppLocalizations.of(context).offline,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: auth.isOnline ? Colors.green : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          auth.isOnline ? "Active" : "Inactive",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Transform.scale(
+                          scale: 0.8,
+                          child: Switch(
+                            value: auth.isOnline,
+                            onChanged: (val) => auth.toggleOnlineStatus(),
+                            activeColor: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               // Stats Cards
               Row(
                 children: [
                   Expanded(
                     child: _buildStatCard(
-                      icon: Icons.access_time_filled,
-                      title: 'Hours',
-                      value: '12.5',
-                      subtitle: 'Goal:20 this month',
-                      iconColor: Colors.blue,
-                      iconBg: Colors.blue.shade50,
+                      icon: Icons.emoji_events,
+                      title: 'My Points',
+                      value:
+                          context
+                              .watch<AuthProvider>()
+                              .user
+                              ?.points
+                              .toString() ??
+                          '0',
+                      subtitle: 'Keep helping!',
+                      iconColor: Colors.orange,
+                      iconBg: Colors.orange.shade50,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildStatCard(
-                      icon: Icons.person,
-                      title: 'Seniors',
-                      value: '5',
-                      subtitle: 'Impacted hearts',
-                      iconColor: Colors
-                          .blue, // Using blue per design consistency or specific color
-                      iconBg: Colors.blue.shade50,
+                      icon: Icons.task_alt,
+                      title: 'Completed',
+                      value:
+                          context
+                              .watch<AuthProvider>()
+                              .user
+                              ?.completedTasks
+                              .toString() ??
+                          '0',
+                      subtitle: 'Impacted Hearts',
+                      iconColor: Colors.green,
+                      iconBg: Colors.green.shade50,
                     ),
                   ),
                 ],
@@ -117,9 +215,9 @@ class VolunteerDashboardScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               // Quick Actions Title
-              const Text(
-                'Quick Actions',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context).quickActions,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.black,
@@ -130,8 +228,8 @@ class VolunteerDashboardScreen extends StatelessWidget {
               // Quick Actions
               _buildQuickActionCard(
                 icon: Icons.calendar_today,
-                title: 'Available task',
-                subtitle: 'Find new ways to help today',
+                title: AppLocalizations.of(context).availableTask,
+                subtitle: AppLocalizations.of(context).findNewWaysToHelp,
                 iconColor: Colors.blue,
                 iconBg: Colors.blue.shade50,
                 onTap: () {
@@ -146,8 +244,8 @@ class VolunteerDashboardScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _buildQuickActionCard(
                 icon: Icons.assignment_turned_in,
-                title: 'My task',
-                subtitle: 'View and manage your schedule',
+                title: AppLocalizations.of(context).myTask,
+                subtitle: AppLocalizations.of(context).viewManageSchedule,
                 iconColor: Colors.blue,
                 iconBg: Colors.blue.shade50,
                 onTap: () {
@@ -157,9 +255,9 @@ class VolunteerDashboardScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               // Next Appointment Title
-              const Text(
-                'Next Appointment',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context).nextAppointment,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.black,
@@ -167,9 +265,10 @@ class VolunteerDashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Appointment Card
+              // Appointment Card (Empty State)
               Container(
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -183,88 +282,18 @@ class VolunteerDashboardScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 24,
-                              backgroundImage: NetworkImage(
-                                'https://i.pravatar.cc/150?img=60',
-                              ), // Martha placeholder
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Martha',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: AppColors.black,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: 14,
-                                      color: Colors.blue.shade400,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'North railway station ,calicut',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'Today',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.event_available_outlined,
+                      size: 48,
+                      color: Colors.grey.shade300,
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        _buildTag(
-                          Icons.access_time,
-                          '2:00 PM',
-                          Colors.blue.shade50,
-                          Colors.blue,
-                        ),
-                        const SizedBox(width: 12),
-                        _buildTag(
-                          Icons.shopping_bag,
-                          'Grocery Help',
-                          Colors.blue.shade50,
-                          Colors.blue,
-                        ),
-                      ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'No upcoming appointments',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -272,50 +301,10 @@ class VolunteerDashboardScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Bottom Banner
-              Container(
-                width: double.infinity,
-                height: 100,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.orange.shade100, // Placeholder color
-                  image: const DecorationImage(
-                    image: NetworkImage(
-                      'https://img.freepik.com/free-vector/volunteering-concept-illustration_114360-1430.jpg?w=1380&t=st=1708249000~exp=1708249600~hmac=...',
-                    ), // Ideally a local asset
-                    fit: BoxFit.cover,
-                    opacity: 0.8,
-                  ),
-                ),
-                child: const Center(
-                  // Placeholder for the banner text/design in the image
-                  child: Text(
-                    'BE VOLUNTEER',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 10,
-                          color: Colors.black45,
-                          offset: Offset(2, 2),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
               const SizedBox(height: 20),
 
               // Next Appointment Title (Duplicate in screenshot? Or just section header)
-              const Text(
-                'Next Appointment',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.black,
-                ),
-              ),
+
               // The screenshot shows "Next Appointment" twice?
               // The last screenshot cut off shows "Next Appointment" followed by the banner.
               // I will assume the banner is separate or part of a list.
@@ -324,6 +313,84 @@ class VolunteerDashboardScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showLanguageBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final List<Map<String, String>> languages = [
+          {'name': 'English', 'code': 'en', 'flag': '🇺🇸'},
+          {'name': 'Malayalam', 'code': 'ml', 'flag': '🇮🇳'},
+          {'name': 'Tamil', 'code': 'ta', 'flag': '🇮🇳'},
+          {'name': 'Hindi', 'code': 'hi', 'flag': '🇮🇳'},
+        ];
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppLocalizations.of(context).selectLanguage,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: languages.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final lang = languages[index];
+                  return Consumer<LocaleProvider>(
+                    builder: (context, localeProvider, _) {
+                      final isSelected =
+                          localeProvider.locale.languageCode == lang['code'];
+                      return ListTile(
+                        leading: Text(
+                          lang['flag']!,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        title: Text(
+                          lang['name']!,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.black,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(
+                                Icons.check_circle,
+                                color: AppColors.primary,
+                              )
+                            : null,
+                        onTap: () {
+                          localeProvider.setLocale(Locale(lang['code']!));
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -442,31 +509,6 @@ class VolunteerDashboardScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTag(IconData icon, String label, Color color, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: textColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ],
       ),
     );
   }

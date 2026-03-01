@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/app_constants.dart';
+import '../../../../core/app_localizations.dart';
 import '../../../../domain/entities/task_entity.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/task_provider.dart';
 import 'volunteer_task_details_screen.dart';
 
 class VolunteerTaskListScreen extends StatefulWidget {
@@ -15,47 +20,10 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<TaskEntity> _tasks = [
-    TaskEntity(
-      id: '1',
-      title: 'Grocery delivery',
-      date: DateTime.now().add(const Duration(days: 1)),
-      status: 'Pending',
-      imageUrl:
-          'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=500&q=60',
-      category: 'Shopping',
-      description:
-          'Looking for someone to help pick up a weekly grocery list...',
-      location: 'Central Market .2nd street',
-    ),
-    TaskEntity(
-      id: '2',
-      title: 'Tech Support for john',
-      date: DateTime.now().add(const Duration(days: 2)),
-      status: 'Pending',
-      imageUrl:
-          'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=500&q=60', // Placeholder
-      category: 'Tech',
-      description: 'Need help setting up a new tablet and printer.',
-      location: 'North Market .2nd street',
-    ),
-    TaskEntity(
-      id: '3',
-      title: 'Garden maintenance',
-      date: DateTime.now().add(const Duration(days: 3)),
-      status: 'Pending',
-      imageUrl:
-          'https://images.unsplash.com/photo-1557429287-b2e26467fc2b?auto=format&fit=crop&w=500&q=60', // Placeholder
-      category: 'Gardening',
-      description: 'Weeding and watering the backyard garden.',
-      location: 'South Park .5th avenue',
-    ),
-  ];
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -66,91 +34,211 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
 
   @override
   Widget build(BuildContext context) {
+    final volunteerId = context.watch<AuthProvider>().user?.id ?? '';
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          'Request Help', // Matching the image title "Request Help" even though it's "Available Tasks" logically
-          style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.taskBoard,
+          style: const TextStyle(
+            color: AppColors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey.shade50,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
-            margin: const EdgeInsets.only(left: 20, right: 20, bottom: 10),
+            height: 50,
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: TabBar(
               controller: _tabController,
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
-                color: Colors.blue,
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(25),
               ),
               labelColor: Colors.white,
-              unselectedLabelColor: Colors.black,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              tabs: const [
-                Tab(text: 'All'),
-                Tab(text: 'Pending'),
-                Tab(text: 'In progress'), // lowercase 'p' in image
-                Tab(text: 'Complete'),
+              unselectedLabelColor: Colors.grey.shade600,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+              tabs: [
+                Tab(text: l10n.helpRequested),
+                Tab(text: l10n.myTaskList),
               ],
             ),
           ),
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Text(
-              'Available community task',
-              style: TextStyle(color: Colors.grey),
+          _buildHelpRequestedTab(l10n),
+          _buildMyTaskListTab(volunteerId, l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpRequestedTab(AppLocalizations l10n) {
+    final authProvider = context.watch<AuthProvider>();
+    final userLat = authProvider.user?.latitude;
+    final userLng = authProvider.user?.longitude;
+
+    if (userLat == null || userLng == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.location_off, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                'Location needed to find nearby requests',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => authProvider.updateLocation(),
+                child: const Text('Enable Location'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Text(
+            '${l10n.availableCommunityTasks} (within 5km)',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTaskList(_tasks), // All
-                _buildTaskList(
-                  _tasks.where((t) => t.status == 'Pending').toList(),
-                ), // Pending
-                _buildTaskList(
-                  _tasks.where((t) => t.status == 'In Progress').toList(),
-                ), // In progress
-                _buildTaskList(
-                  _tasks.where((t) => t.status == 'Completed').toList(),
-                ), // Complete
-              ],
+        ),
+        Expanded(
+          child: StreamBuilder<List<TaskEntity>>(
+            stream: context.read<TaskProvider>().watchNearbyTasks(
+              userLat,
+              userLng,
+              5.0,
             ),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return _buildEmptyState(l10n.noNewRequestsAvailable);
+              }
+
+              return _buildTaskList(snapshot.data!, true, l10n);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMyTaskListTab(String volunteerId, AppLocalizations l10n) {
+    if (volunteerId.isEmpty) {
+      return _buildEmptyState(l10n.checkYourTasks);
+    }
+
+    return FutureBuilder<void>(
+      future: context.read<TaskProvider>().fetchMyTasks(volunteerId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            context.read<TaskProvider>().myTasks.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final tasks = context.watch<TaskProvider>().myTasks;
+
+        if (tasks.isEmpty) {
+          return _buildEmptyState(l10n.youHaventAcceptedAnyTasksYet);
+        }
+
+        return _buildTaskList(tasks, false, l10n);
+      },
+    );
+  }
+
+  // Task mapping removed - now handled by TaskProvider and Repository
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.assignment_outlined,
+            size: 64,
+            color: Colors.grey.shade300,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTaskList(List<TaskEntity> tasks) {
-    if (tasks.isEmpty) {
-      return const Center(child: Text('No tasks found'));
-    }
+  Widget _buildTaskList(
+    List<TaskEntity> tasks,
+    bool isHelpRequest,
+    AppLocalizations l10n,
+  ) {
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
-        return _buildVolunteerTaskCard(tasks[index]);
+        return _buildVolunteerTaskCard(tasks[index], isHelpRequest, l10n);
       },
     );
   }
 
-  Widget _buildVolunteerTaskCard(TaskEntity task) {
+  Widget _buildVolunteerTaskCard(
+    TaskEntity task,
+    bool isHelpRequest,
+    AppLocalizations l10n,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -171,14 +259,17 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: SizedBox(
-              height: 180,
+              height: 160,
               width: double.infinity,
               child: Image.network(
                 task.imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  color: Colors.grey.shade300,
-                  child: const Center(child: Icon(Icons.image_not_supported)),
+                  color: Colors.grey.shade100,
+                  child: const Icon(
+                    Icons.image_not_supported,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ),
@@ -188,51 +279,61 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: Colors.blue.shade400,
+                    Expanded(
+                      child: Text(
+                        task.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.black,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'feb 03 2026 3:00 pm', // Mock date format
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: Colors.blue.shade400,
+                    _buildStatusChip(task.status),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: Colors.blue.shade400,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      DateFormat('MMM dd, yyyy • h:mm a').format(task.date),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: Colors.blue.shade400,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        task.location,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          task.location,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -241,12 +342,15 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Colors.blue.shade600, // Slightly simpler blue
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: isHelpRequest
+                          ? AppColors.primary
+                          : Colors.grey.shade100,
+                      foregroundColor: isHelpRequest
+                          ? Colors.white
+                          : AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 0,
                     ),
@@ -259,11 +363,11 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
                         ),
                       );
                     },
-                    child: const Text(
-                      'Accept Task',
-                      style: TextStyle(
+                    child: Text(
+                      isHelpRequest ? l10n.acceptTask : l10n.viewDetails,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 15,
                       ),
                     ),
                   ),
@@ -272,6 +376,41 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color color;
+    switch (status.toLowerCase()) {
+      case 'pending':
+        color = Colors.orange;
+        break;
+      case 'accepted':
+      case 'in progress':
+        color = Colors.blue;
+        break;
+      case 'completed':
+      case 'complete':
+        color = Colors.green;
+        break;
+      default:
+        color = Colors.grey;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

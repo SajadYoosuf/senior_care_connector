@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/app_constants.dart';
 import '../../../domain/entities/volunteer_entity.dart';
-import '../../../data/repositories/mock_volunteer_repository.dart';
+
 import 'chat_detail_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -12,7 +12,6 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  final MockVolunteerRepository _repository = MockVolunteerRepository();
   List<VolunteerEntity> _volunteers = [];
   bool _isLoading = true;
 
@@ -23,10 +22,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Future<void> _loadChats() async {
-    final volunteers = await _repository.getVolunteers();
     if (mounted) {
       setState(() {
-        _volunteers = volunteers;
+        _volunteers = [];
         _isLoading = false;
       });
     }
@@ -47,6 +45,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _volunteers.isEmpty
+          ? Center(
+              child: Text(
+                'No active chats.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              ),
+            )
           : ListView.separated(
               itemCount: _volunteers.length,
               separatorBuilder: (context, index) => const Divider(height: 1),

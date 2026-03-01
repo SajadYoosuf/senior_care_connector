@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_constants.dart';
-import '../role_selection_screen.dart';
+import '../../../core/app_localizations.dart';
+import '../login_screen.dart';
 import '../../providers/auth_provider.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -13,29 +15,13 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Profile & settings',
+          'Profile',
           style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.only(left: 16),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 20,
-              color: AppColors.black,
-            ),
-            onPressed: () {
-              // Back or nothing if it's a main tab
-            },
-          ),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -44,12 +30,23 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Stack(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 60,
-                  backgroundImage: NetworkImage(
-                    'https://i.pravatar.cc/150?img=68',
-                  ), // Mock profile
-                  backgroundColor: Colors.grey,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child: Text(
+                    context.watch<AuthProvider>().user?.name.isNotEmpty == true
+                        ? context
+                              .watch<AuthProvider>()
+                              .user!
+                              .name[0]
+                              .toUpperCase()
+                        : '👴',
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
                 Positioned(
                   bottom: 0,
@@ -57,11 +54,11 @@ class ProfileScreen extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: const BoxDecoration(
-                      color: Colors.blue,
+                      color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.edit,
+                      Icons.camera_alt,
                       color: Colors.white,
                       size: 16,
                     ),
@@ -70,28 +67,37 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Phillip Lipshutz',
-              style: TextStyle(
-                fontSize: 22,
+            Text(
+              context.watch<AuthProvider>().user?.name ?? 'Senior User',
+              style: const TextStyle(
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.black,
               ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
             const SizedBox(height: 8),
             Text(
-              'Verified member since 2026',
-              style: TextStyle(fontSize: 14, color: Colors.blue.shade400),
+              AppLocalizations.of(context).verifiedMember,
+              style: TextStyle(fontSize: 13, color: Colors.blue.shade400),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.location_on, size: 14, color: Colors.blue.shade400),
                 const SizedBox(width: 4),
-                Text(
-                  'Upper east side , calicut',
-                  style: TextStyle(fontSize: 14, color: Colors.blue.shade400),
+                Flexible(
+                  child: Text(
+                    'Upper east side , calicut',
+                    style: TextStyle(fontSize: 13, color: Colors.blue.shade400),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -99,39 +105,63 @@ class ProfileScreen extends StatelessWidget {
 
             _buildProfileOption(
               icon: Icons.person_outline,
-              title: 'Edit Profile',
-              onTap: () {},
-            ),
-            _buildProfileOption(
-              icon: Icons.notifications_none,
-              title: 'Notifications',
-              onTap: () {},
-            ),
-            _buildProfileOption(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              onTap: () {},
-            ),
-            _buildProfileOption(
-              icon: Icons.help_outline,
-              title: 'Help and Support',
-              onTap: () {},
-            ),
-            _buildProfileOption(
-              icon: Icons.logout,
-              title: 'Log Out',
-              onTap: () async {
-                final authProvider = context.read<AuthProvider>();
-                await authProvider.logout();
-                if (!context.mounted) return;
-                Navigator.pushAndRemoveUntil(
+              title: AppLocalizations.of(context).editProfile,
+              onTap: () {
+                Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const RoleSelectionScreen(),
+                    builder: (context) => const EditProfileScreen(),
                   ),
-                  (route) => false,
                 );
               },
+            ),
+
+            _buildProfileOption(
+              icon: Icons.help_outline,
+              title: AppLocalizations.of(context).helpSupport,
+              onTap: () {},
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade50,
+                  foregroundColor: Colors.red,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.red.shade200),
+                  ),
+                ),
+                onPressed: () async {
+                  final authProvider = context.read<AuthProvider>();
+                  await authProvider.logout();
+                  if (!context.mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.logout, size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppLocalizations.of(context).logOut,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -143,6 +173,8 @@ class ProfileScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    Color textColor = AppColors.black,
+    Color iconColor = Colors.blue,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -159,14 +191,16 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
       child: ListTile(
-        leading: Icon(icon, color: Colors.blue),
+        leading: Icon(icon, color: iconColor),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w500,
-            fontSize: 16,
-            color: AppColors.black,
+            fontSize: 14,
+            color: textColor,
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
         trailing: const Icon(
           Icons.arrow_forward_ios,

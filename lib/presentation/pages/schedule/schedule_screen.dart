@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/app_constants.dart';
+import '../../providers/auth_provider.dart';
 import '../../../domain/entities/reminder_entity.dart';
 
 class ScheduleScreen extends StatelessWidget {
@@ -7,44 +10,7 @@ class ScheduleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mock data
-    final List<ReminderEntity> reminders = [
-      const ReminderEntity(
-        id: '1',
-        title: 'Take blood pressure pill',
-        subtitle: '1 Tablet . 8:00 AM',
-        time: '8:00 AM', // not strictly used in loop if subtitle used
-        isCompleted: true,
-        type: 'pill',
-      ),
-      const ReminderEntity(
-        id: '2',
-        title: 'Visit sarah',
-        subtitle: 'Arrival at 3:00 PM',
-        time: '3:00 PM',
-        isCompleted: false,
-        type: 'visit',
-      ),
-      const ReminderEntity(
-        id: '3',
-        title: 'Afternoon lunch',
-        subtitle: 'Prepare salad . 1:00 PM',
-        time: '1:00 PM',
-        isCompleted: false,
-        type: 'food',
-      ),
-      const ReminderEntity(
-        id: '4',
-        title: 'Check blood sugar',
-        subtitle: '1 Tablet . 8:00 AM',
-        time: '8:00 AM',
-        isCompleted: false,
-        type: 'checkup',
-      ),
-    ];
-
-    int completedCount = reminders.where((r) => r.isCompleted).length;
-    double progress = completedCount / reminders.length;
+    final user = context.read<AuthProvider>().user;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -56,113 +22,160 @@ class ScheduleScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.only(left: 16),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 20,
-              color: AppColors.black,
-            ),
-            onPressed: () {
-              // This might be main tab, check back button behavior
-              // If it's a tab, back button logic might differ
-            },
-          ),
-        ),
+        automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Daily Progress
-            const Text(
-              'Daily Progress',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.black,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${reminders.length - completedCount} tasks remaining for today',
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-                Text(
-                  '$completedCount of ${reminders.length}',
-                  style: const TextStyle(
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 12,
-                backgroundColor: Colors.grey.shade200,
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(height: 32),
+      body: user == null
+          ? const Center(child: CircularProgressIndicator())
+          : ValueListenableBuilder(
+              valueListenable: Hive.box('tasks').listenable(),
+              builder: (context, boxTasks, _) {
+                return ValueListenableBuilder(
+                  valueListenable: Hive.box('medicines').listenable(),
+                  builder: (context, boxMed, _) {
+                    final List<ReminderEntity> reminders = [];
 
-            // Upcoming Reminders
-            const Text(
-              'Upcoming Reminders',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.black,
-              ),
+                    final userTasks = boxTasks.values
+                        .where((e) => e is Map && e['userId'] == user.id)
+                        .toList();
+                    final userMeds = boxMed.values
+                        .where((e) => e is Map && e['userId'] == user.id)
+                        .toList();
+
+                    for (var task in userTasks) {
+                      final t = task as Map;
+                      var timeStr = 'Any time';
+                      if (t['scheduledAt'] != null) {
+                        try {
+                          final dt = DateTime.parse(t['scheduledAt']);
+                          timeStr =
+                              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                        } catch (_) {}
+                      }
+                      reminders.add(
+                        ReminderEntity(
+                          id: t['createdAt'].toString(),
+                          title: t['title'] ?? 'Task',
+                          subtitle: t['notes'] != null && t['notes'].isNotEmpty
+                              ? t['notes']
+                              : timeStr,
+                          time: timeStr,
+                          isCompleted: t['status'] == 'Completed',
+                          type: 'Task',
+                        ),
+                      );
+                    }
+
+                    for (var med in userMeds) {
+                      final m = med as Map;
+                      reminders.add(
+                        ReminderEntity(
+                          id: m['createdAt'].toString(),
+                          title: 'Take ${m['name'] ?? 'medicine'}',
+                          subtitle: '${m['frequency']} . ${m['time']}',
+                          time: m['time'] ?? '',
+                          isCompleted:
+                              false, // Medicine has no complete status in mock
+                          type: 'pill',
+                        ),
+                      );
+                    }
+
+                    int completedCount = reminders
+                        .where((r) => r.isCompleted)
+                        .length;
+                    double progress = reminders.isEmpty
+                        ? 0.0
+                        : completedCount / reminders.length;
+
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Daily Progress',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${reminders.length - completedCount} tasks remaining for today',
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                              Text(
+                                '$completedCount of ${reminders.length}',
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 12,
+                              backgroundColor: Colors.grey.shade200,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          const Text(
+                            'Upcoming Reminders',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (reminders.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'No tasks remaining for today.',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ...reminders.map(
+                              (reminder) => _buildReminderCard(reminder),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
             ),
-            const SizedBox(height: 16),
-            ...reminders.map((reminder) => _buildReminderCard(reminder)),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(20),
-        color: Colors.white,
-        child: SafeArea(
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              // Call support
-            },
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.call, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Call for support',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 

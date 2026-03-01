@@ -16,9 +16,6 @@ class SignUpScreen extends StatelessWidget {
     final success = await authProvider.signUp(role);
     if (success) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created successfully!')),
-      );
       final user = authProvider.user;
       if (user?.role == 'volunteer' || user?.role == 'both') {
         Navigator.pushAndRemoveUntil(
@@ -139,6 +136,39 @@ class SignUpScreen extends StatelessWidget {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Select Gender',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _genderOption(
+                        context,
+                        'Male',
+                        Icons.male,
+                        authProvider.signUpGender == 'Male',
+                        () => authProvider.setSignUpGender('Male'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _genderOption(
+                        context,
+                        'Female',
+                        Icons.female,
+                        authProvider.signUpGender == 'Female',
+                        () => authProvider.setSignUpGender('Female'),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
                 Row(
@@ -267,6 +297,47 @@ class SignUpScreen extends StatelessWidget {
           ],
         ),
         child: Image.asset(imagePath, height: 24, width: 24),
+      ),
+    );
+  }
+
+  Widget _genderOption(
+    BuildContext context,
+    String label,
+    IconData icon,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? AppColors.primary : Colors.grey,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? AppColors.primary : AppColors.black,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

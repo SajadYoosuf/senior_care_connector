@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import '../../core/app_constants.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
-import 'sign_up_screen.dart';
 import 'admin_login_screen.dart';
 import 'forgot_password_screen.dart';
 import 'main_screen.dart';
+import 'role_selection_screen.dart';
 import 'volunteer/volunteer_main_screen.dart';
 import '../providers/auth_provider.dart';
 
@@ -136,14 +136,25 @@ class LoginScreen extends StatelessWidget {
                     _socialLoginButton(
                       imagePath: 'assets/images/google_logo.png',
                       onTap: () async {
-                        final success = await authProvider.signInWithGoogle(
-                          role ?? 'volunteer',
-                        );
+                        final success = await authProvider.signInWithGoogle();
                         if (success) {
                           if (!context.mounted) return;
                           final user = authProvider.user;
-                          if (user?.role == 'volunteer' ||
-                              user?.role == 'both') {
+
+                          // If user has NO role, go to Role Selection
+                          if (user?.role == null || user!.role.isEmpty) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const RoleSelectionScreen(isPostAuth: true),
+                              ),
+                              (route) => false,
+                            );
+                            return;
+                          }
+
+                          if (user.role == 'volunteer' || user.role == 'both') {
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
@@ -186,8 +197,7 @@ class LoginScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                SignUpScreen(role: role ?? 'volunteer'),
+                            builder: (context) => const RoleSelectionScreen(),
                           ),
                         );
                       },

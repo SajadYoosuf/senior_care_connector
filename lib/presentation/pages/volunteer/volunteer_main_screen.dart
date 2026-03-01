@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:app/core/app_constants.dart';
+import 'package:app/core/app_localizations.dart';
 
 import 'dashboard/volunteer_dashboard_screen.dart';
-import 'tasks/volunteer_task_list_screen.dart';
+import 'leaderboard/volunteer_leaderboard_screen.dart';
 import 'chat/volunteer_chat_list_screen.dart';
 import 'profile/volunteer_profile_screen.dart';
 
@@ -18,7 +19,7 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
 
   final List<Widget> _screens = [
     const VolunteerDashboardScreen(),
-    const VolunteerTaskListScreen(),
+    const VolunteerLeaderboardScreen(),
     const VolunteerChatListScreen(),
     const VolunteerProfileScreen(),
   ];
@@ -43,28 +44,33 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildNavItem(0, Icons.home_rounded, Icons.home_outlined, 'Home'),
+              _buildNavItem(
+                0,
+                Icons.home_rounded,
+                Icons.home_outlined,
+                AppLocalizations.of(context).home,
+              ),
               _buildNavItem(
                 1,
-                Icons.assignment_rounded,
-                Icons.assignment_outlined,
-                'Tasks',
+                Icons.emoji_events,
+                Icons.emoji_events_outlined,
+                AppLocalizations.of(context).leaderboard,
               ),
               _buildNavItem(
                 2,
                 Icons.chat_bubble_rounded,
                 Icons.chat_bubble_outline_rounded,
-                'Chat',
+                AppLocalizations.of(context).chat,
               ),
               _buildNavItem(
                 3,
                 Icons.person_rounded,
                 Icons.person_outline_rounded,
-                'Profile',
+                AppLocalizations.of(context).profile,
               ),
             ],
           ),
@@ -85,7 +91,7 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withOpacity(0.1)
@@ -93,6 +99,7 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedScale(
               duration: const Duration(milliseconds: 300),
@@ -104,13 +111,18 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
               ),
             ),
             if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 72),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],

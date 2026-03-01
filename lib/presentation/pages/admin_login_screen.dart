@@ -4,6 +4,7 @@ import '../../core/app_constants.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../providers/auth_provider.dart';
+import 'admin/admin_main_screen.dart';
 
 class AdminLoginScreen extends StatelessWidget {
   const AdminLoginScreen({super.key});
@@ -58,9 +59,8 @@ class AdminLoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 CustomButton(
-                  text: authProvider.isLoading
-                      ? 'Authenticating...'
-                      : 'Login as Admin',
+                  text: 'Login as Admin',
+                  isLoading: authProvider.isLoading,
                   onPressed: () async {
                     final success = await authProvider.login('admin');
                     if (success) {
@@ -68,7 +68,13 @@ class AdminLoginScreen extends StatelessWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Admin Login Successful')),
                       );
-                      // TODO: Navigate to Admin Dashboard
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminMainScreen(),
+                        ),
+                        (route) => false,
+                      );
                     } else {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
