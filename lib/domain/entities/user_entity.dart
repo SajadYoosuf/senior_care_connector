@@ -11,6 +11,7 @@ class UserEntity {
   final int completedTasks;
   final String badge; // 'None', 'Bronze', 'Silver', 'Gold'
   final String? profileImageUrl;
+  final String? profession;
 
   const UserEntity({
     required this.id,
@@ -25,5 +26,6 @@ class UserEntity {
     this.completedTasks = 0,
     this.badge = 'None',
     this.profileImageUrl,
+    this.profession,
   });
 }

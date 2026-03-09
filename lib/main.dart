@@ -70,13 +70,16 @@ class MyApp extends StatelessWidget {
           home = const LoginScreen();
         } else {
           // Determine role from provider first, fallback to initialRole
-          final role = authProvider.user?.role ?? initialRole;
+          final baseRole = authProvider.user?.role ?? initialRole;
+          final role = baseRole == 'both'
+              ? authProvider.activeRoleMode
+              : baseRole;
 
           if (role == null || role.isEmpty) {
             home = const RoleSelectionScreen(isPostAuth: true);
           } else if (role == 'admin') {
             home = const AdminMainScreen();
-          } else if (role == 'volunteer' || role == 'both') {
+          } else if (role == 'volunteer') {
             home = const VolunteerMainScreen();
           } else {
             home = const MainScreen();

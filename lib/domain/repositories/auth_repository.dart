@@ -11,8 +11,9 @@ abstract class AuthRepository {
     String email,
     String password,
     String role,
-    String gender,
-  );
+    String gender, [
+    String? profession,
+  ]);
   Future<void> updateUserProfile({String? name, String? gender});
   Future<UserEntity?> signInWithGoogle([String? role]);
   Future<void> logout();

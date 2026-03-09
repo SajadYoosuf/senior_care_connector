@@ -5,8 +5,10 @@ import '../../../../core/app_constants.dart';
 import '../../../../core/app_localizations.dart';
 import '../../../../domain/entities/task_entity.dart';
 import '../contact/volunteer_contact_screen.dart';
+import '../chat/volunteer_chat_details_screen.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/task_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class VolunteerTaskDetailsScreen extends StatelessWidget {
   final TaskEntity task;
@@ -89,11 +91,14 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                       color: Colors.blue.shade400,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      task.location,
-                      style: TextStyle(
-                        color: Colors.blue.shade400,
-                        fontSize: 14,
+                    Flexible(
+                      child: Text(
+                        task.location,
+                        style: TextStyle(
+                          color: Colors.blue.shade400,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -130,7 +135,9 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
                       _buildTag(
                         _getCategoryIcon(task.category),
@@ -138,7 +145,6 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                         Colors.blue.shade50,
                         Colors.blue,
                       ),
-                      const SizedBox(width: 12),
                       _buildTag(
                         Icons.calendar_today,
                         DateFormat('MMM dd, h:mm a').format(task.date),
@@ -162,92 +168,113 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Location Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade100),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.location_on,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Pickup Location',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
+            GestureDetector(
+              onTap: () async {
+                final lat = task.latitude;
+                final lng = task.longitude;
+                Uri uri;
+                if (lat != null && lng != null) {
+                  uri = Uri.parse(
+                    'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                  );
+                } else {
+                  uri = Uri.parse(
+                    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(task.location)}',
+                  );
+                }
+
+                try {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } catch (e) {
+                  debugPrint('Could not launch \$uri: \$e');
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Central Market .2nd street', // Hardcoded per image or task.location
-                            style: const TextStyle(
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Area Location',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                task.location,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.map,
+                            color: Colors.blue.shade300,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Tap to Open in Google Maps',
+                            style: TextStyle(
+                              color: Colors.blue,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: AppColors.black,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    height: 150,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://i.pravatar.cc/150?img=10',
-                        ), // Placeholder for map
-                        fit: BoxFit.cover,
-                      ),
                     ),
-                    child: Center(
-                      child: Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 40,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Center(
-                    child: Text(
-                      'Open in Maps',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 100), // Spacing
@@ -303,7 +330,18 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  // Chat
+                  final userId = context.read<AuthProvider>().user?.id ?? '';
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VolunteerChatDetailsScreen(
+                        taskId: task.id,
+                        currentUserId: userId,
+                        userName: task.requesterName,
+                        userAvatar: '', // Placeholder or task.requesterAvatar
+                      ),
+                    ),
+                  );
                 },
                 child: const Icon(Icons.chat_bubble_outline),
               ),

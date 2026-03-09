@@ -12,6 +12,22 @@ class AuthProvider extends ChangeNotifier {
   bool _isOnline = true;
   bool get isOnline => _isOnline;
 
+  String _activeRoleMode = '';
+
+  String get activeRoleMode {
+    if (_user?.role == 'both') {
+      return _activeRoleMode.isEmpty ? 'volunteer' : _activeRoleMode;
+    }
+    return _user?.role ?? '';
+  }
+
+  void toggleRoleMode() {
+    if (_user?.role == 'both') {
+      _activeRoleMode = activeRoleMode == 'volunteer' ? 'senior' : 'volunteer';
+      notifyListeners();
+    }
+  }
+
   Future<void> toggleOnlineStatus() async {
     _isOnline = !_isOnline;
     notifyListeners();
@@ -150,6 +166,7 @@ class AuthProvider extends ChangeNotifier {
   // --- Sign Up Controllers ---
   final signUpNameController = TextEditingController();
   final signUpEmailController = TextEditingController();
+  final signUpProfessionController = TextEditingController();
   final signUpPasswordController = TextEditingController();
   final signUpConfirmPasswordController = TextEditingController();
   String _signUpGender = 'Male';
@@ -189,6 +206,7 @@ class AuthProvider extends ChangeNotifier {
     loginPasswordController.dispose();
     signUpNameController.dispose();
     signUpEmailController.dispose();
+    signUpProfessionController.dispose();
     signUpPasswordController.dispose();
     signUpConfirmPasswordController.dispose();
     forgotEmailController.dispose();
@@ -208,6 +226,7 @@ class AuthProvider extends ChangeNotifier {
     loginPasswordController.clear();
     signUpNameController.clear();
     signUpEmailController.clear();
+    signUpProfessionController.clear();
     signUpPasswordController.clear();
     signUpConfirmPasswordController.clear();
     forgotEmailController.clear();
@@ -265,6 +284,9 @@ class AuthProvider extends ChangeNotifier {
         signUpPasswordController.text.trim(),
         role,
         _signUpGender,
+        (role == 'volunteer' || role == 'both')
+            ? signUpProfessionController.text.trim()
+            : null,
       );
       if (user != null) {
         _user = user;

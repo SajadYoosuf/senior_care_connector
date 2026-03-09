@@ -8,119 +8,78 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/task_provider.dart';
 import 'volunteer_task_details_screen.dart';
 
-class VolunteerTaskListScreen extends StatefulWidget {
-  const VolunteerTaskListScreen({super.key});
+class VolunteerMyTasksScreen extends StatefulWidget {
+  const VolunteerMyTasksScreen({super.key});
 
   @override
-  State<VolunteerTaskListScreen> createState() =>
-      _VolunteerTaskListScreenState();
+  State<VolunteerMyTasksScreen> createState() => _VolunteerMyTasksScreenState();
 }
 
-class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
+class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen> {
   @override
   void initState() {
     super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null) {
+        context.read<TaskProvider>().fetchMyTasks(auth.user!.id);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final authProvider = context.watch<AuthProvider>();
+    final volunteerId = authProvider.user?.id ?? '';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
-          l10n.taskBoard,
+          l10n.myTask,
           style: const TextStyle(
             color: AppColors.black,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: _buildHelpRequestedTab(l10n),
+      body: _buildBody(volunteerId, l10n),
     );
   }
 
-  Widget _buildHelpRequestedTab(AppLocalizations l10n) {
-    final authProvider = context.watch<AuthProvider>();
-    final userLat = authProvider.user?.latitude;
-    final userLng = authProvider.user?.longitude;
-
-    if (userLat == null || userLng == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.location_off, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                'Location needed to find nearby requests',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => authProvider.updateLocation(),
-                child: const Text('Enable Location'),
-              ),
-            ],
-          ),
-        ),
-      );
+  Widget _buildBody(String volunteerId, AppLocalizations l10n) {
+    if (volunteerId.isEmpty) {
+      return _buildEmptyState(l10n.checkYourTasks);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: Text(
-            '${l10n.availableCommunityTasks} (within 5km)',
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Expanded(
-          child: StreamBuilder<List<TaskEntity>>(
-            stream: context.read<TaskProvider>().watchNearbyTasks(
-              userLat,
-              userLng,
-              5.0,
-            ),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return _buildEmptyState(l10n.noNewRequestsAvailable);
-              }
+    final taskProvider = context.watch<TaskProvider>();
 
-              return _buildTaskList(snapshot.data!, true, l10n);
-            },
-          ),
-        ),
-      ],
+    if (taskProvider.isLoading && taskProvider.myTasks.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final tasks = taskProvider.myTasks;
+
+    if (tasks.isEmpty) {
+      return _buildEmptyState(l10n.youHaventAcceptedAnyTasksYet);
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        return _buildVolunteerTaskCard(tasks[index], l10n);
+      },
     );
   }
-
-  // Task mapping removed - now handled by TaskProvider and Repository
 
   Widget _buildEmptyState(String message) {
     return Center(
@@ -128,7 +87,7 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.assignment_outlined,
+            Icons.assignment_turned_in_outlined,
             size: 64,
             color: Colors.grey.shade300,
           ),
@@ -142,25 +101,7 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
     );
   }
 
-  Widget _buildTaskList(
-    List<TaskEntity> tasks,
-    bool isHelpRequest,
-    AppLocalizations l10n,
-  ) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      itemCount: tasks.length,
-      itemBuilder: (context, index) {
-        return _buildVolunteerTaskCard(tasks[index], isHelpRequest, l10n);
-      },
-    );
-  }
-
-  Widget _buildVolunteerTaskCard(
-    TaskEntity task,
-    bool isHelpRequest,
-    AppLocalizations l10n,
-  ) {
+  Widget _buildVolunteerTaskCard(TaskEntity task, AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -264,12 +205,8 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isHelpRequest
-                          ? AppColors.primary
-                          : Colors.grey.shade100,
-                      foregroundColor: isHelpRequest
-                          ? Colors.white
-                          : AppColors.primary,
+                      backgroundColor: Colors.grey.shade100,
+                      foregroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -286,7 +223,7 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
                       );
                     },
                     child: Text(
-                      isHelpRequest ? l10n.acceptTask : l10n.viewDetails,
+                      l10n.viewDetails,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,

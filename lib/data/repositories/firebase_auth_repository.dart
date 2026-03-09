@@ -69,8 +69,9 @@ class FirebaseAuthRepository implements AuthRepository {
     String email,
     String password,
     String role,
-    String gender,
-  ) async {
+    String gender, [
+    String? profession,
+  ]) async {
     try {
       final UserCredential credential = await _firebaseAuth
           .createUserWithEmailAndPassword(email: email, password: password);
@@ -82,15 +83,22 @@ class FirebaseAuthRepository implements AuthRepository {
           name: name,
           role: role,
           gender: gender,
+          profession: profession,
         );
 
-        await _firestore.collection('users').doc(user.id).set({
+        final docData = <String, dynamic>{
           'name': name,
           'email': email,
           'role': role,
           'gender': gender,
           'createdAt': FieldValue.serverTimestamp(),
-        });
+        };
+
+        if (profession != null && profession.isNotEmpty) {
+          docData['profession'] = profession;
+        }
+
+        await _firestore.collection('users').doc(user.id).set(docData);
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);

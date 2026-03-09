@@ -1,0 +1,117 @@
+Product Backlog — Role Based (FINAL)
+Updated backlog fully aligned with role-based design: Senior, Volunteer, Both — only login uses generic user
+wording.
+1. Authentication & Role Selection
+ID
+User Story
+Acceptance Criteria
+Priority
+AUTH-01
+As a user, I want to sign up and log in so I can
+use the app.
+Account created, login successful.
+MUST
+AUTH-02
+As a user, I want to choose Senior, Volunteer, or
+Both on first login.
+Role shown once, saved permanently,
+cannot change later.
+MUST
+AUTH-03
+As a user, I want the app to automatically open
+my correct dashboard.
+Senior → Senior dashboard, Volunteer →
+Volunteer dashboard, Both → combined
+dashboard.
+MUST
+2. Senior Stories
+ID
+User Story
+Acceptance Criteria
+Priority
+SNR-01
+As a senior, I want a Request Help button.
+Help request saved and visible to
+volunteers.
+MUST
+SNR-02
+As a senior, I want an SOS emergency button.
+SOS highlighted clearly to nearby
+volunteers.
+SHOULD
+SNR-03
+As a senior, I want medicine reminders.
+Notifications appear at correct time.
+SHOULD
+SNR-04
+As a senior, I want doctor / task reminders.
+Custom reminders can be added and
+edited.
+SHOULD
+SNR-05
+As a senior, I want to see my help history.
+Completed help requests listed.
+COULD
+3. Volunteer Stories
+ID
+User Story
+Acceptance Criteria
+Priority
+VOL-01
+As a volunteer, I want to see nearby help
+requests.
+Requests load correctly.
+MUST
+VOL-02
+As a volunteer, I want to accept and complete
+requests.
+Status updates Pending → Accepted →
+Completed.
+MUST
+VOL-03
+As a volunteer, I want to toggle Online / Offline.
+Offline volunteers do not receive requests.
+MUST
+VOL-04
+As a volunteer, I want matching within 5 km.
+Only seniors inside ~5 km radius appear.
+SHOULD
+VOL-05
+As a volunteer, I want push notifications.
+Requests and SOS notify instantly.
+SHOULD
+VOL-06
+As a volunteer, I want badge rewards (Bronze /
+Silver / Gold).
+Badges unlock after milestones.
+COULD
+4. Shared Features (Senior + Volunteer)
+ID
+User Story
+Acceptance Criteria
+Priority
+SHR-01
+As a user with any role, I want chat messaging.
+Messages send and appear in order.
+SHOULD
+SHR-02
+As a user with any role, I want 1■to■1 video
+calling.
+Call connects and ends using Agora.
+COULD
+
+SHR-03
+As a user with any role, I want language switching
+(Malayalam / English).
+All visible labels update.
+SHOULD
+5. Caregiver Stories
+ID
+User Story
+Acceptance Criteria
+Priority
+CG-01
+As a caregiver, I want a simple dashboard to
+review senior safety.
+Shows reminders, SOS, and activity logs.
+COULD

@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/app_constants.dart';
 import '../../../domain/entities/message_entity.dart';
 
 class ChatDetailScreen extends StatefulWidget {
+  final String taskId;
+  final String currentUserId;
   final String userName;
   final String userAvatar;
 
   const ChatDetailScreen({
     super.key,
+    required this.taskId,
+    required this.currentUserId,
     required this.userName,
     required this.userAvatar,
   });
@@ -18,41 +25,24 @@ class ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final List<MessageEntity> _messages = [
-    MessageEntity(
-      id: '1',
-      text:
-          'Hello! im here to help you today.do you need assistance with your groceries',
-      isMe: false,
-      time: DateTime.now().subtract(const Duration(minutes: 5)),
-      senderName: 'Alfredo Lubin',
-      senderAvatar: 'https://i.pravatar.cc/150?img=11',
-    ),
-    MessageEntity(
-      id: '2',
-      text: 'Yes, please.i’ve sent a list.',
-      isMe: true,
-      time: DateTime.now().subtract(const Duration(minutes: 4)),
-      senderName: 'Me',
-      senderAvatar: '', // Current user avatar
-    ),
-    MessageEntity(
-      id: '3',
-      text: 'I see it. i’ll be there in 20 minutes to pick them up',
-      isMe: false,
-      time: DateTime.now().subtract(const Duration(minutes: 3)),
-      senderName: 'Alfredo Lubin',
-      senderAvatar: 'https://i.pravatar.cc/150?img=11',
-    ),
-    MessageEntity(
-      id: '4',
-      text: 'Okk',
-      isMe: true,
-      time: DateTime.now().subtract(const Duration(minutes: 1)),
-      senderName: 'Me',
-      senderAvatar: '',
-    ),
-  ];
+
+  void _sendMessage(String textContent) {
+    if (textContent.trim().isEmpty) return;
+
+    FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.taskId)
+        .collection('messages')
+        .add({
+          'text': textContent,
+          'senderId': widget.currentUserId,
+          'senderName': 'Me',
+          'senderAvatar': '',
+          'time': FieldValue.serverTimestamp(),
+        });
+
+    _messageController.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,8 +52,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundImage: NetworkImage(widget.userAvatar),
+              backgroundColor: Colors.blue.shade100,
               radius: 20,
+              child: Text(
+                widget.userName.isNotEmpty
+                    ? widget.userName[0].toUpperCase()
+                    : 'V',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Column(
@@ -139,11 +139,50 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(_messages[index]);
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chats')
+                  .doc(widget.taskId)
+                  .collection('messages')
+                  .orderBy('time', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snapshot.data!.docs;
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No messages yet.',
+                      style: TextStyle(color: Colors.grey.shade500),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final isMe = data['senderId'] == widget.currentUserId;
+
+                    final msg = MessageEntity(
+                      id: docs[index].id,
+                      text: data['text'] ?? '',
+                      isMe: isMe,
+                      time:
+                          (data['time'] as Timestamp?)?.toDate() ??
+                          DateTime.now(),
+                      senderName: data['senderName'] ?? '',
+                      senderAvatar: data['senderAvatar'] ?? '',
+                    );
+
+                    return _buildMessageBubble(msg);
+                  },
+                );
               },
             ),
           ),
@@ -164,8 +203,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         children: [
           if (!message.isMe) ...[
             CircleAvatar(
-              backgroundImage: NetworkImage(message.senderAvatar),
+              backgroundColor: Colors.blue.shade100,
               radius: 16,
+              child: Text(
+                widget.userName.isNotEmpty
+                    ? widget.userName[0].toUpperCase()
+                    : 'V',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -189,23 +238,49 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                 ],
               ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  color: message.isMe ? Colors.white : AppColors.black,
-                  fontSize: 16,
-                ),
+              child: Builder(
+                builder: (context) {
+                  if (message.text.startsWith('[IMG]')) {
+                    try {
+                      final base64String = message.text.substring(5);
+                      final bytes = base64Decode(base64String);
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          bytes,
+                          width: 200,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    } catch (e) {
+                      return const Icon(Icons.broken_image, color: Colors.grey);
+                    }
+                  } else {
+                    return Text(
+                      message.text,
+                      style: TextStyle(
+                        color: message.isMe ? Colors.white : AppColors.black,
+                        fontSize: 16,
+                      ),
+                    );
+                  }
+                },
               ),
             ),
           ),
           if (message.isMe) ...[
             const SizedBox(width: 8),
-            const CircleAvatar(
-              // Current User
-              backgroundImage: NetworkImage(
-                'https://i.pravatar.cc/150?img=68',
-              ), // Mock user
+            CircleAvatar(
+              backgroundColor: Colors.blue.shade100,
               radius: 16,
+              child: const Text(
+                'M',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ],
@@ -222,13 +297,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
+          GestureDetector(
+            onTap: () async {
+              final picker = ImagePicker();
+              final image = await picker.pickImage(source: ImageSource.gallery);
+              if (image != null) {
+                final bytes = await image.readAsBytes();
+                final base64String = base64Encode(bytes);
+                _sendMessage('[IMG]$base64String');
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.camera_alt, color: Colors.blueGrey),
             ),
-            child: const Icon(Icons.camera_alt, color: Colors.blueGrey),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -259,19 +345,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               icon: const Icon(Icons.send, color: Colors.white),
               onPressed: () {
                 if (_messageController.text.isNotEmpty) {
-                  setState(() {
-                    _messages.add(
-                      MessageEntity(
-                        id: DateTime.now().toString(),
-                        text: _messageController.text,
-                        isMe: true,
-                        time: DateTime.now(),
-                        senderName: 'Me',
-                        senderAvatar: '',
-                      ),
-                    );
-                    _messageController.clear();
-                  });
+                  _sendMessage(_messageController.text);
                 }
               },
             ),

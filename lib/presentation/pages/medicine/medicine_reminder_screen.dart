@@ -72,10 +72,33 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
     );
   }
 
-  void _showAddMedicineModal() {
-    final nameCtrl = TextEditingController();
-    TimeOfDay? selectedTime;
-    String frequency = 'Daily';
+  void _showAddEditMedicineModal([Map<String, dynamic>? existingData]) {
+    final nameCtrl = TextEditingController(text: existingData?['name'] ?? '');
+    String frequency = existingData?['frequency'] ?? 'Daily';
+    List<TimeOfDay> selectedTimes = [];
+    List<int> selectedDays = []; // 1=Mon, 7=Sun
+
+    if (existingData != null) {
+      if (existingData['times'] != null) {
+        final List<dynamic> timesList = existingData['times'];
+        selectedTimes = timesList.map((t) {
+          final parts = t.toString().split(':');
+          return TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          );
+        }).toList();
+      } else if (existingData['time'] != null) {
+        final parts = existingData['time'].toString().split(':');
+        selectedTimes.add(
+          TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
+        );
+      }
+
+      if (existingData['days'] != null) {
+        selectedDays = List<int>.from(existingData['days']);
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -92,96 +115,225 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
               right: 24,
               top: 24,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Add Medicine Reminder',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Medicine Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    existingData != null
+                        ? 'Edit Medicine Reminder'
+                        : 'Add Medicine Reminder',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    selectedTime == null
-                        ? 'Select Time'
-                        : 'Time: ${selectedTime!.format(context)}',
-                  ),
-                  trailing: const Icon(Icons.access_time),
-                  onTap: () async {
-                    final time = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.now(),
-                    );
-                    if (time != null) {
-                      setModalState(() => selectedTime = time);
-                    }
-                  },
-                ),
-                DropdownButtonFormField<String>(
-                  value: frequency,
-                  decoration: const InputDecoration(labelText: 'Frequency'),
-                  items: ['Daily', 'Weekly']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) => setModalState(() => frequency = v!),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Medicine Name',
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      if (nameCtrl.text.isEmpty || selectedTime == null) return;
-
-                      final user = context.read<AuthProvider>().user;
-                      if (user == null) return;
-
-                      final box = Hive.box('medicines');
-                      await box.add({
-                        'userId': user.id,
-                        'name': nameCtrl.text.trim(),
-                        'time':
-                            '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}',
-                        'frequency': frequency,
-                        'createdAt': DateTime.now().toIso8601String(),
-                      });
-
-                      await _scheduleNotification(
-                        nameCtrl.text.trim(),
-                        selectedTime!,
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Select Times (${selectedTimes.length} added)'),
+                    trailing: const Icon(Icons.add_alarm),
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
                       );
-
-                      if (context.mounted) Navigator.pop(context);
+                      if (time != null) {
+                        setModalState(() {
+                          if (!selectedTimes.contains(time)) {
+                            selectedTimes.add(time);
+                          }
+                        });
+                      }
                     },
-                    child: const Text(
-                      'Save Reminder',
-                      style: TextStyle(color: Colors.white),
+                  ),
+                  if (selectedTimes.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      children: selectedTimes
+                          .map(
+                            (t) => Chip(
+                              label: Text(t.format(context)),
+                              onDeleted: () =>
+                                  setModalState(() => selectedTimes.remove(t)),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: frequency,
+                    decoration: const InputDecoration(labelText: 'Frequency'),
+                    items: ['Daily', 'Weekly']
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
+                    onChanged: (v) => setModalState(() => frequency = v!),
+                  ),
+                  if (frequency == 'Weekly') ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Select Days:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [1, 2, 3, 4, 5, 6, 7].map((day) {
+                        final dayName = [
+                          'Mon',
+                          'Tue',
+                          'Wed',
+                          'Thu',
+                          'Fri',
+                          'Sat',
+                          'Sun',
+                        ][day - 1];
+                        final isSelected = selectedDays.contains(day);
+                        return FilterChip(
+                          label: Text(dayName),
+                          selected: isSelected,
+                          onSelected: (val) {
+                            setModalState(() {
+                              if (val)
+                                selectedDays.add(day);
+                              else
+                                selectedDays.remove(day);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (nameCtrl.text.isEmpty || selectedTimes.isEmpty)
+                          return;
+
+                        if (frequency == 'Weekly' && selectedDays.isEmpty)
+                          return;
+
+                        final user = context.read<AuthProvider>().user;
+                        if (user == null) return;
+
+                        final box = Hive.box('medicines');
+                        final newMap = {
+                          'userId': user.id,
+                          'name': nameCtrl.text.trim(),
+                          'times': selectedTimes
+                              .map(
+                                (t) =>
+                                    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
+                              )
+                              .toList(),
+                          'frequency': frequency,
+                          'days': frequency == 'Weekly' ? selectedDays : null,
+                          'createdAt':
+                              existingData?['createdAt'] ??
+                              DateTime.now().toIso8601String(),
+                          'lastTakenAt': existingData?['lastTakenAt'],
+                          'lastTakenNote': existingData?['lastTakenNote'],
+                        };
+
+                        if (existingData != null) {
+                          await box.put(existingData['key'], newMap);
+                        } else {
+                          await box.add(newMap);
+                        }
+
+                        for (var t in selectedTimes) {
+                          await _scheduleNotification(
+                            nameCtrl.text.trim() + t.toString(),
+                            t,
+                          );
+                        }
+
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'Save Reminder',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showTakeMedicineOptions(Map<String, dynamic> data) {
+    String reason = '';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Take ${data['name']}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Did you take this medicine or picked it up?\nAdd notes/status why:',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              onChanged: (v) => reason = v,
+              decoration: InputDecoration(
+                hintText: 'e.g., Taken after meal, forgot morning dose',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () {
+              final box = Hive.box('medicines');
+              final map = Map<String, dynamic>.from(data);
+              map.remove('key');
+              map['lastTakenAt'] = DateTime.now().toIso8601String();
+              map['lastTakenNote'] = reason;
+              box.put(data['key'], map);
+              Navigator.pop(ctx);
+            },
+            child: const Text(
+              'Save Status',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -228,34 +380,85 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                   itemCount: userReminders.length,
                   itemBuilder: (context, index) {
                     final data = userReminders[index];
+                    final timesList =
+                        (data['times'] as List<dynamic>?)?.join(', ') ??
+                        data['time'] ??
+                        '';
+
+                    String daysStr = '';
+                    if (data['frequency'] == 'Weekly' && data['days'] != null) {
+                      final d = List<int>.from(data['days']);
+                      d.sort();
+                      final mapD = d
+                          .map(
+                            (x) => [
+                              'Mon',
+                              'Tue',
+                              'Wed',
+                              'Thu',
+                              'Fri',
+                              'Sat',
+                              'Sun',
+                            ][x - 1],
+                          )
+                          .join(', ');
+                      daysStr = '\nDays: $mapD';
+                    }
+
+                    final takenNote = data['lastTakenNote'] != null
+                        ? '\nStatus: ${data['lastTakenNote']}\nLast Update: ${data['lastTakenAt'].toString().split('T').first}'
+                        : '';
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue.shade50,
-                          child: const Icon(
-                            Icons.medical_services,
-                            color: Colors.blue,
+                      child: InkWell(
+                        onTap: () => _showTakeMedicineOptions(data),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.blue.shade50,
+                              child: const Icon(
+                                Icons.medical_services,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            title: Text(
+                              data['name'] ?? '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Times: $timesList • ${data['frequency']}$daysStr$takenNote',
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () =>
+                                      _showAddEditMedicineModal(data),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    box.delete(data['key']);
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        title: Text(
-                          data['name'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          '${data['time']} • ${data['frequency']}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                          ),
-                          onPressed: () {
-                            box.delete(data['key']);
-                          },
                         ),
                       ),
                     );
@@ -264,7 +467,7 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddMedicineModal,
+        onPressed: () => _showAddEditMedicineModal(),
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Add', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primary,

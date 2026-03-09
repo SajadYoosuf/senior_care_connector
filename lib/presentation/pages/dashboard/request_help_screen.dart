@@ -22,6 +22,8 @@ class _RequestHelpScreenState extends State<RequestHelpScreen> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String _locationText = '';
+  double? _latitude;
+  double? _longitude;
   File? _imageFile;
 
   final TextEditingController _titleController = TextEditingController();
@@ -139,15 +141,29 @@ class _RequestHelpScreenState extends State<RequestHelpScreen> {
         position.longitude,
       );
 
-      if (placemarks.isNotEmpty && mounted) {
-        final Placemark p = placemarks.first;
-        final String address = [
-          p.street,
-          p.subLocality,
-          p.locality,
-          p.administrativeArea,
-        ].where((e) => e != null && e.isNotEmpty).join(', ');
-        setState(() => _locationText = address);
+      if (mounted) {
+        setState(() {
+          _latitude = position!.latitude;
+          _longitude = position.longitude;
+        });
+
+        if (placemarks.isNotEmpty) {
+          final Placemark p = placemarks.first;
+          final String address = [
+            p.street,
+            p.subLocality,
+            p.locality,
+            p.administrativeArea,
+          ].where((e) => e != null && e.isNotEmpty).join(', ');
+          setState(() {
+            _locationText = address;
+          });
+        } else {
+          setState(() {
+            _locationText =
+                'Lat: ${position!.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}';
+          });
+        }
       }
     } on LocationServiceDisabledException {
       if (!mounted) return;
@@ -284,6 +300,8 @@ class _RequestHelpScreenState extends State<RequestHelpScreen> {
         'imageUrl': imageUrl,
         'scheduledAt': Timestamp.fromDate(scheduledAt),
         'location': _locationText.trim(),
+        'latitude': _latitude,
+        'longitude': _longitude,
         'notes': _notesController.text.trim(),
         'status': 'Pending',
         'createdAt': FieldValue.serverTimestamp(),

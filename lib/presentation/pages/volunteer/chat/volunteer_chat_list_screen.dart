@@ -100,6 +100,8 @@ class _VolunteerChatListScreenState extends State<VolunteerChatListScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => VolunteerChatDetailsScreen(
+                    taskId: 'mock_task_id',
+                    currentUserId: 'mock_current_user',
                     userName: chat['name'],
                     userAvatar: chat['image'],
                   ),

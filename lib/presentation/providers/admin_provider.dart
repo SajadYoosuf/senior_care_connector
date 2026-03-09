@@ -51,7 +51,7 @@ class AdminProvider extends ChangeNotifier {
 
     // Listen to Pending Tasks count
     _firestore
-        .collection('tasks')
+        .collection('help_requests')
         .where('status', isEqualTo: 'Pending')
         .snapshots()
         .listen((snapshot) {
@@ -62,7 +62,7 @@ class AdminProvider extends ChangeNotifier {
     // Today's visits (Mock logic: count tasks created today or scheduled for today)
     // For now, let's just count tasks updated in the last 24h as a proxy or keep it real if date field exists
     _firestore
-        .collection('tasks')
+        .collection('help_requests')
         .where('status', isEqualTo: 'Accepted')
         .snapshots()
         .listen((snapshot) {

@@ -113,6 +113,42 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
+              // Role Switcher
+              if (context.watch<AuthProvider>().user?.role == 'both')
+                GestureDetector(
+                  onTap: () => context.read<AuthProvider>().toggleRoleMode(),
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.swap_horiz, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Switch to Volunteer View',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // Emergency Call Widget
               const SizedBox(height: 32),
 

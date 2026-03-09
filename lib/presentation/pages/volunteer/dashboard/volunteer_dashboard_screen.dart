@@ -4,7 +4,10 @@ import '../../../../core/app_constants.dart';
 import '../../../../core/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/locale_provider.dart';
+import '../../../../domain/entities/task_entity.dart';
+import '../../../providers/task_provider.dart';
 import '../tasks/volunteer_task_list_screen.dart';
+import '../tasks/volunteer_my_tasks_screen.dart';
 import '../../notifications/notification_screen.dart';
 
 class VolunteerDashboardScreen extends StatelessWidget {
@@ -62,6 +65,25 @@ class VolunteerDashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          if (context.watch<AuthProvider>().user?.role == 'both') ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: IconButton(
+                onPressed: () => context.read<AuthProvider>().toggleRoleMode(),
+                icon: const Icon(
+                  Icons.swap_horiz,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                tooltip: 'Switch to Senior View',
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -174,6 +196,42 @@ class VolunteerDashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Role Switcher
+              if (context.watch<AuthProvider>().user?.role == 'both')
+                GestureDetector(
+                  onTap: () => context.read<AuthProvider>().toggleRoleMode(),
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.swap_horiz, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Switch to Senior View',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // Stats Cards
               Row(
                 children: [
@@ -214,6 +272,105 @@ class VolunteerDashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
+              Builder(
+                builder: (context) {
+                  final authProvider = context.watch<AuthProvider>();
+                  final userLat = authProvider.user?.latitude;
+                  final userLng = authProvider.user?.longitude;
+
+                  if (userLat != null && userLng != null) {
+                    return StreamBuilder<List<TaskEntity>>(
+                      stream: context.read<TaskProvider>().watchNearbyTasks(
+                        userLat,
+                        userLng,
+                        5.0,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                          final requests = snapshot.data!;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 24),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.campaign,
+                                  color: Colors.red.shade700,
+                                  size: 32,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${requests.length} Nearby Help Request${requests.length > 1 ? 's' : ''}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red.shade900,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Help is needed in your area right now!',
+                                        style: TextStyle(
+                                          color: Colors.red.shade700,
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const VolunteerTaskListScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade600,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'View',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+
               // Quick Actions Title
               Text(
                 AppLocalizations.of(context).quickActions,
@@ -249,7 +406,12 @@ class VolunteerDashboardScreen extends StatelessWidget {
                 iconColor: Colors.blue,
                 iconBg: Colors.blue.shade50,
                 onTap: () {
-                  // Navigate to My Tasks (Schedule)
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VolunteerMyTasksScreen(),
+                    ),
+                  );
                 },
               ),
               const SizedBox(height: 32),

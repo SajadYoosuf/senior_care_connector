@@ -98,6 +98,22 @@ class SignUpScreen extends StatelessWidget {
                     return null;
                   },
                 ),
+                if (role == 'volunteer' || role == 'both') ...[
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    hintText: 'Profession (e.g. Doctor, Plumber)',
+                    controller: authProvider.signUpProfessionController,
+                    prefixIcon: const Icon(
+                      Icons.work_outline,
+                      color: AppColors.grey,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty)
+                        return 'Please enter your profession';
+                      return null;
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
                 CustomTextField(
                   hintText: 'Password',

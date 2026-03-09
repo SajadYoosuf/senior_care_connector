@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import '../../../core/app_constants.dart';
 import '../../../domain/entities/volunteer_entity.dart';
+import '../../providers/auth_provider.dart';
+import '../chat/chat_detail_screen.dart';
 
 import '../../widgets/volunteer_card.dart';
 
@@ -12,6 +17,7 @@ class VolunteersScreen extends StatefulWidget {
 }
 
 class _VolunteersScreenState extends State<VolunteersScreen> {
+  List<VolunteerEntity> _allVolunteers = [];
   List<VolunteerEntity> _volunteers = [];
   bool _isLoading = true;
   String _selectedFilter = 'All';
@@ -23,13 +29,104 @@ class _VolunteersScreenState extends State<VolunteersScreen> {
   void initState() {
     super.initState();
     _loadVolunteers();
+    _searchController.addListener(_applyFilters);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadVolunteers() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', whereIn: ['volunteer', 'both'])
+          .get();
+
+      final currentUser = context.read<AuthProvider>().user;
+      final currentLat = currentUser?.latitude;
+      final currentLng = currentUser?.longitude;
+
+      List<VolunteerEntity> volunteerList = [];
+      for (var doc in snapshot.docs) {
+        if (doc.id == currentUser?.id) continue;
+
+        final data = doc.data();
+        double distance = 0.0;
+        final double? lat = data['latitude'] as double?;
+        final double? lng = data['longitude'] as double?;
+
+        if (currentLat != null &&
+            currentLng != null &&
+            lat != null &&
+            lng != null) {
+          distance =
+              Geolocator.distanceBetween(currentLat, currentLng, lat, lng) /
+              1000; // to km
+        }
+
+        volunteerList.add(
+          VolunteerEntity(
+            id: doc.id,
+            name: data['name'] ?? 'Unknown',
+            specialty: data['profession'] ?? 'General Helper',
+            rating: (data['rating'] ?? 5.0).toDouble(),
+            reviewCount: data['completedTasks'] ?? 0,
+            distance: distance,
+            imageUrl:
+                data['profileImageUrl'] ??
+                'https://i.pravatar.cc/150?u=${doc.id}',
+          ),
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _allVolunteers = volunteerList;
+          _isLoading = false;
+        });
+        _applyFilters();
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _applyFilters() {
+    List<VolunteerEntity> filtered = List.from(_allVolunteers);
+
+    final query = _searchController.text.toLowerCase();
+    if (query.isNotEmpty) {
+      filtered = filtered.where((v) {
+        return v.name.toLowerCase().contains(query) ||
+            v.specialty.toLowerCase().contains(query);
+      }).toList();
+    }
+
+    if (_selectedFilter == 'Nearby') {
+      filtered = filtered
+          .where((v) => v.distance < 20.0)
+          .toList(); // less than 20km
+      filtered.sort((a, b) => a.distance.compareTo(b.distance));
+    } else if (_selectedFilter == 'Top Rated') {
+      filtered.sort((a, b) => b.rating.compareTo(a.rating));
+    } else if (_selectedFilter == 'Doctors') {
+      filtered = filtered
+          .where(
+            (v) =>
+                v.specialty.toLowerCase().contains('doctor') ||
+                v.specialty.toLowerCase().contains('dr.') ||
+                v.specialty.toLowerCase().contains('nurse') ||
+                v.specialty.toLowerCase().contains('md'),
+          )
+          .toList();
+    }
+
     if (mounted) {
       setState(() {
-        _volunteers = [];
-        _isLoading = false;
+        _volunteers = filtered;
       });
     }
   }
@@ -113,6 +210,7 @@ class _VolunteersScreenState extends State<VolunteersScreen> {
                   onTap: () {
                     setState(() {
                       _selectedFilter = filter;
+                      _applyFilters();
                     });
                   },
                   child: Container(
@@ -164,7 +262,21 @@ class _VolunteersScreenState extends State<VolunteersScreen> {
                           // Call logic
                         },
                         onChat: () {
-                          // navigate to chat
+                          final currentUser = context.read<AuthProvider>().user;
+                          if (currentUser != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatDetailScreen(
+                                  taskId: _volunteers[index]
+                                      .id, // Uses profile-level UUID
+                                  currentUserId: currentUser.id,
+                                  userName: _volunteers[index].name,
+                                  userAvatar: _volunteers[index].imageUrl,
+                                ),
+                              ),
+                            );
+                          }
                         },
                       );
                     },
