@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../domain/entities/task_entity.dart';
 import '../../domain/repositories/task_repository.dart';
+import '../../core/services/fcm_service.dart';
 
 class FirebaseTaskRepository implements TaskRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -99,6 +100,17 @@ class FirebaseTaskRepository implements TaskRepository {
       'volunteerId': volunteerId,
       'acceptedAt': FieldValue.serverTimestamp(),
     });
+
+    // Notify requester
+    final task = await getTaskById(taskId);
+    if (task != null) {
+      await FCMService.instance.sendNotificationToUser(
+        userId: task.requesterId,
+        title: 'Help is on the way!',
+        body: 'A volunteer has accepted your request: ${task.title}',
+        data: {'type': 'task_accepted', 'taskId': taskId},
+      );
+    }
   }
 
   @override
@@ -108,6 +120,7 @@ class FirebaseTaskRepository implements TaskRepository {
 
     final data = doc.data()!;
     final volunteerId = data['volunteerId'];
+    final requesterId = data['userId'];
 
     await _firestore.runTransaction((transaction) async {
       // Update Task
@@ -142,6 +155,18 @@ class FirebaseTaskRepository implements TaskRepository {
         }
       }
     });
+
+    // Notify requester
+    if (requesterId != null) {
+      final taskTitle = data['title'] ?? 'your request';
+      await FCMService.instance.sendNotificationToUser(
+        userId: requesterId,
+        title: 'Task Completed',
+        body:
+            'Your request "$taskTitle" has been marked as completed. Thank you!',
+        data: {'type': 'task_completed', 'taskId': taskId},
+      );
+    }
   }
 
   @override

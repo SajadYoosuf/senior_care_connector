@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+import 'package:alarm/alarm.dart';
 import '../../../core/app_constants.dart';
 import '../../providers/auth_provider.dart';
+import '../../../data/repositories/activity_log_repository.dart';
 
 class MedicineReminderScreen extends StatefulWidget {
   const MedicineReminderScreen({super.key});
@@ -15,30 +14,14 @@ class MedicineReminderScreen extends StatefulWidget {
 }
 
 class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  final ActivityLogRepository _activityLogRepository = ActivityLogRepository();
 
   @override
   void initState() {
     super.initState();
-    _initNotifications();
   }
 
-  Future<void> _initNotifications() async {
-    tz.initializeTimeZones();
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _notificationsPlugin.initialize(
-      settings: const InitializationSettings(android: androidInit),
-    );
-
-    _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
-  }
-
-  Future<void> _scheduleNotification(String name, TimeOfDay time) async {
+  Future<void> _scheduleAlarm(String name, TimeOfDay time, {int? id}) async {
     final now = DateTime.now();
     var scheduledDate = DateTime(
       now.year,
@@ -52,24 +35,25 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
-    const androidDetails = AndroidNotificationDetails(
-      'medicine_channel',
-      'Medicine Reminders',
-      channelDescription: 'Reminders to take your medicine',
-      importance: Importance.max,
-      priority: Priority.high,
+    final alarmSettings = AlarmSettings(
+      id: id ?? DateTime.now().millisecondsSinceEpoch % 100000,
+      dateTime: scheduledDate,
+      assetAudioPath: null,
+      loopAudio: true,
+      vibrate: true,
+      volumeSettings: VolumeSettings.fade(
+        volume: 0.8,
+        fadeDuration: Duration(seconds: 5),
+      ),
+      notificationSettings: NotificationSettings(
+        title: 'Medicine Reminder',
+        body: 'It\'s time to take your $name',
+        stopButton: 'Stop',
+        icon: 'notification_icon',
+      ),
     );
-    const details = NotificationDetails(android: androidDetails);
 
-    await _notificationsPlugin.zonedSchedule(
-      id: name.hashCode,
-      title: 'Time for Medicine!',
-      body: 'Please take your $name now.',
-      scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
-      notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+    await Alarm.set(alarmSettings: alarmSettings);
   }
 
   void _showAddEditMedicineModal([Map<String, dynamic>? existingData]) {
@@ -262,9 +246,12 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                         }
 
                         for (var t in selectedTimes) {
-                          await _scheduleNotification(
-                            nameCtrl.text.trim() + t.toString(),
+                          await _scheduleAlarm(
+                            nameCtrl.text.trim(),
                             t,
+                            id:
+                                (nameCtrl.text.trim() + t.toString()).hashCode %
+                                100000,
                           );
                         }
 
@@ -319,14 +306,28 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
+            onPressed: () async {
               final box = Hive.box('medicines');
               final map = Map<String, dynamic>.from(data);
               map.remove('key');
               map['lastTakenAt'] = DateTime.now().toIso8601String();
               map['lastTakenNote'] = reason;
               box.put(data['key'], map);
-              Navigator.pop(ctx);
+
+              // Log activity to Firestore for admin/caregiver
+              final user = context.read<AuthProvider>().user;
+              if (user != null) {
+                await _activityLogRepository.logActivity(
+                  userId: user.id,
+                  userName: user.name,
+                  role: 'senior',
+                  action: 'MEDICINE_TAKEN',
+                  details: 'Took medicine: ${data['name']}. Note: $reason',
+                  targetName: data['name'],
+                );
+              }
+
+              if (context.mounted) Navigator.pop(ctx);
             },
             child: const Text(
               'Save Status',
@@ -452,7 +453,13 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                                     Icons.delete_outline,
                                     color: Colors.red,
                                   ),
-                                  onPressed: () {
+                                  onPressed: () async {
+                                    final id =
+                                        (data['name'].toString() +
+                                                (data['time'] ?? ''))
+                                            .hashCode %
+                                        100000;
+                                    await Alarm.stop(id);
                                     box.delete(data['key']);
                                   },
                                 ),

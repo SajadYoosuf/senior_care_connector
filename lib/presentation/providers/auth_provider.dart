@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 
@@ -109,6 +110,7 @@ class AuthProvider extends ChangeNotifier {
       final user = await _authRepository.getCurrentUser();
       if (user != null) {
         _user = user;
+        await _updateFcmToken();
       }
     } catch (e) {
       debugPrint('Error loading current user: $e');
@@ -252,6 +254,7 @@ class AuthProvider extends ChangeNotifier {
       );
       if (user != null) {
         _user = user;
+        await _updateFcmToken();
         _isLoading = false;
         clearControllers();
         notifyListeners();
@@ -290,6 +293,7 @@ class AuthProvider extends ChangeNotifier {
       );
       if (user != null) {
         _user = user;
+        await _updateFcmToken();
         _isLoading = false;
         clearControllers();
         notifyListeners();
@@ -404,6 +408,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
+    await FirebaseMessaging.instance.unsubscribeFromTopic('volunteers');
     await _authRepository.logout();
     _user = null;
     _isLoading = false;
@@ -483,6 +488,52 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = 'Failed to update profile';
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<void> _updateFcmToken() async {
+    if (_user == null) return;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        String? token = await messaging.getToken();
+        if (token != null) {
+          await _saveTokenToFirestore(token);
+        }
+
+        // Listen for token refreshes
+        messaging.onTokenRefresh.listen((newToken) async {
+          await _saveTokenToFirestore(newToken);
+        });
+
+        if (_user!.role == 'volunteer' || _user!.role == 'both') {
+          await messaging.subscribeToTopic('volunteers');
+          debugPrint('Subscribed to volunteers topic');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error updating FCM token: $e');
+    }
+  }
+
+  Future<void> _saveTokenToFirestore(String token) async {
+    if (_user == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.id)
+          .update({'fcmToken': token});
+      debugPrint('FCM Token saved to Firestore');
+    } catch (e) {
+      debugPrint('Error saving FCM Token: $e');
     }
   }
 }

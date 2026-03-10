@@ -114,6 +114,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             currentUserId: currentUserId,
                             userName: volunteerName,
                             userAvatar: '',
+                            recipientId: volunteerId,
                           ),
                         ),
                       );

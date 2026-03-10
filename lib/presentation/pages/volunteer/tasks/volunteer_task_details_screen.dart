@@ -9,11 +9,21 @@ import '../chat/volunteer_chat_details_screen.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/task_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../data/repositories/activity_log_repository.dart';
 
-class VolunteerTaskDetailsScreen extends StatelessWidget {
+class VolunteerTaskDetailsScreen extends StatefulWidget {
   final TaskEntity task;
 
-  const VolunteerTaskDetailsScreen({super.key, required this.task});
+  VolunteerTaskDetailsScreen({super.key, required this.task});
+
+  @override
+  State<VolunteerTaskDetailsScreen> createState() =>
+      _VolunteerTaskDetailsScreenState();
+}
+
+class _VolunteerTaskDetailsScreenState
+    extends State<VolunteerTaskDetailsScreen> {
+  final ActivityLogRepository _activityLogRepository = ActivityLogRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +68,8 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                   radius: 40,
                   backgroundColor: AppColors.primary.withOpacity(0.1),
                   child: Text(
-                    task.requesterName.isNotEmpty
-                        ? task.requesterName[0].toUpperCase()
+                    widget.task.requesterName.isNotEmpty
+                        ? widget.task.requesterName[0].toUpperCase()
                         : 'S',
                     style: const TextStyle(
                       fontSize: 32,
@@ -70,7 +80,7 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  task.requesterName,
+                  widget.task.requesterName,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -93,7 +103,7 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        task.location,
+                        widget.task.location,
                         style: TextStyle(
                           color: Colors.blue.shade400,
                           fontSize: 14,
@@ -127,7 +137,7 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    task.title,
+                    widget.task.title,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -140,14 +150,14 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                     runSpacing: 12,
                     children: [
                       _buildTag(
-                        _getCategoryIcon(task.category),
-                        task.category,
+                        _getCategoryIcon(widget.task.category),
+                        widget.task.category,
                         Colors.blue.shade50,
                         Colors.blue,
                       ),
                       _buildTag(
                         Icons.calendar_today,
-                        DateFormat('MMM dd, h:mm a').format(task.date),
+                        DateFormat('MMM dd, h:mm a').format(widget.task.date),
                         Colors.blue.shade50,
                         Colors.blue,
                       ),
@@ -155,7 +165,7 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    task.description,
+                    widget.task.description,
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       height: 1.5,
@@ -170,8 +180,8 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
             // Location Card
             GestureDetector(
               onTap: () async {
-                final lat = task.latitude;
-                final lng = task.longitude;
+                final lat = widget.task.latitude;
+                final lng = widget.task.longitude;
                 Uri uri;
                 if (lat != null && lng != null) {
                   uri = Uri.parse(
@@ -179,7 +189,7 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                   );
                 } else {
                   uri = Uri.parse(
-                    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(task.location)}',
+                    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(widget.task.location)}',
                   );
                 }
 
@@ -233,7 +243,7 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                task.location,
+                                widget.task.location,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -310,7 +320,12 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const VolunteerContactScreen(),
+                      builder: (context) => VolunteerContactScreen(
+                        userName: widget.task.requesterName ?? 'Senior',
+                        channelName: 'task_${widget.task.id}',
+                        userAvatar:
+                            'https://i.pravatar.cc/150?u=${widget.task.requesterId}',
+                      ),
                     ),
                   );
                 },
@@ -335,10 +350,11 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => VolunteerChatDetailsScreen(
-                        taskId: task.id,
+                        taskId: widget.task.id,
                         currentUserId: userId,
-                        userName: task.requesterName,
-                        userAvatar: '', // Placeholder or task.requesterAvatar
+                        userName: widget.task.requesterName,
+                        userAvatar: '',
+                        recipientId: widget.task.requesterId,
                       ),
                     ),
                   );
@@ -352,9 +368,11 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
               child: Consumer<TaskProvider>(
                 builder: (context, taskProvider, _) {
                   final isAccepted =
-                      task.status == 'Accepted' || task.status == 'In Progress';
+                      widget.task.status == 'Accepted' ||
+                      widget.task.status == 'In Progress';
                   final isCompleted =
-                      task.status == 'Completed' || task.status == 'Complete';
+                      widget.task.status == 'Completed' ||
+                      widget.task.status == 'Complete';
 
                   if (isCompleted) {
                     return Container(
@@ -393,7 +411,20 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
 
                             try {
                               if (isAccepted) {
-                                await taskProvider.completeTask(task.id);
+                                await taskProvider.completeTask(widget.task.id);
+
+                                // Log activity
+                                await _activityLogRepository.logActivity(
+                                  userId: auth.user!.id,
+                                  userName: auth.user!.name,
+                                  role: 'volunteer',
+                                  action: 'TASK_COMPLETED',
+                                  details:
+                                      'Completed task: ${widget.task.title}',
+                                  targetId: widget.task.id,
+                                  targetName: widget.task.title,
+                                );
+
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -406,9 +437,22 @@ class VolunteerTaskDetailsScreen extends StatelessWidget {
                                 }
                               } else {
                                 await taskProvider.acceptTask(
-                                  task.id,
+                                  widget.task.id,
                                   auth.user!.id,
                                 );
+
+                                // Log activity
+                                await _activityLogRepository.logActivity(
+                                  userId: auth.user!.id,
+                                  userName: auth.user!.name,
+                                  role: 'volunteer',
+                                  action: 'TASK_ACCEPTED',
+                                  details:
+                                      'Accepted task: ${widget.task.title}',
+                                  targetId: widget.task.id,
+                                  targetName: widget.task.title,
+                                );
+
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

@@ -4,11 +4,15 @@ import '../../../../core/app_constants.dart';
 import '../../../../core/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/locale_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../domain/entities/task_entity.dart';
 import '../../../providers/task_provider.dart';
 import '../tasks/volunteer_task_list_screen.dart';
 import '../tasks/volunteer_my_tasks_screen.dart';
 import '../../notifications/notification_screen.dart';
+import '../../../../agora_logic.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class VolunteerDashboardScreen extends StatelessWidget {
   const VolunteerDashboardScreen({super.key});
@@ -84,6 +88,30 @@ class VolunteerDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(width: 12),
           ],
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const VideoCallScreen(channelName: 'senior_care_test'),
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.videocam_outlined,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -196,6 +224,8 @@ class VolunteerDashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildActiveSOSSection(context),
+              const SizedBox(height: 16),
               // Role Switcher
               if (context.watch<AuthProvider>().user?.role == 'both')
                 GestureDetector(
@@ -672,6 +702,133 @@ class VolunteerDashboardScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildActiveSOSSection(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('sos_alerts')
+          .where('status', isEqualTo: 'Active')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.0),
+              child: Text(
+                '🚨 ACTIVE SOS ALERTS',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            ...snapshot.data!.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade900,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.white24,
+                          child: Text(
+                            data['userName']?[0].toUpperCase() ?? 'S',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data['userName'] ?? 'Someone',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const Text(
+                                'Emergency Help Needed!',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Colors.white24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (data['locationUrl'] != null)
+                          TextButton.icon(
+                            onPressed: () async {
+                              final url = Uri.parse(data['locationUrl']);
+                              if (await canLaunchUrl(url)) {
+                                await launchUrl(
+                                  url,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.location_on, size: 18),
+                            label: const Text('LOCATION'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            FirebaseFirestore.instance
+                                .collection('sos_alerts')
+                                .doc(doc.id)
+                                .update({
+                                  'status': 'Responding',
+                                  'responderId': context
+                                      .read<AuthProvider>()
+                                      .user
+                                      ?.id,
+                                });
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('I AM RESPONDING'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        );
+      },
     );
   }
 }

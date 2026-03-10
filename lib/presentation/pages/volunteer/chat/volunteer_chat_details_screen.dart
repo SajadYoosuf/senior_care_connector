@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/app_constants.dart';
 import '../../../../domain/entities/message_entity.dart';
+import '../../../../core/services/fcm_service.dart';
 import '../contact/volunteer_contact_screen.dart';
 
 class VolunteerChatDetailsScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class VolunteerChatDetailsScreen extends StatefulWidget {
   final String currentUserId;
   final String userName;
   final String userAvatar;
+  final String recipientId;
 
   const VolunteerChatDetailsScreen({
     super.key,
@@ -18,6 +20,7 @@ class VolunteerChatDetailsScreen extends StatefulWidget {
     required this.currentUserId,
     required this.userName,
     required this.userAvatar,
+    required this.recipientId,
   });
 
   @override
@@ -43,6 +46,18 @@ class _VolunteerChatDetailsScreenState
           'senderAvatar': '',
           'time': FieldValue.serverTimestamp(),
         });
+
+    // Send FCM to recipient
+    FCMService.instance.sendNotificationToUser(
+      userId: widget.recipientId,
+      title: 'New Message',
+      body: textContent.startsWith('[IMG]') ? 'Sent an image' : textContent,
+      data: {
+        'type': 'chat',
+        'taskId': widget.taskId,
+        'senderId': widget.currentUserId,
+      },
+    );
 
     _messageController.clear();
   }
@@ -141,7 +156,11 @@ class _VolunteerChatDetailsScreenState
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const VolunteerContactScreen(),
+                    builder: (context) => VolunteerContactScreen(
+                      userName: widget.userName,
+                      channelName: widget.taskId,
+                      userAvatar: widget.userAvatar,
+                    ),
                   ),
                 );
               },
@@ -312,6 +331,7 @@ class _VolunteerChatDetailsScreenState
               final XFile? image = await picker.pickImage(
                 source: ImageSource.gallery,
                 imageQuality: 50,
+                maxWidth: 800,
               );
               if (image != null) {
                 final bytes = await image.readAsBytes();

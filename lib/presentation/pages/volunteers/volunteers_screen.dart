@@ -268,11 +268,11 @@ class _VolunteersScreenState extends State<VolunteersScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ChatDetailScreen(
-                                  taskId: _volunteers[index]
-                                      .id, // Uses profile-level UUID
+                                  taskId: _volunteers[index].id,
                                   currentUserId: currentUser.id,
                                   userName: _volunteers[index].name,
                                   userAvatar: _volunteers[index].imageUrl,
+                                  recipientId: _volunteers[index].id,
                                 ),
                               ),
                             );

@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/app_constants.dart';
+import '../../../providers/auth_provider.dart';
 
 class AdminChatScreen extends StatefulWidget {
   const AdminChatScreen({super.key});
@@ -10,41 +13,34 @@ class AdminChatScreen extends StatefulWidget {
 
 class _AdminChatScreenState extends State<AdminChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'text': 'Hello! How can we help you today?',
-      'isMe': false,
-      'time': '10:00 AM',
-    },
-  ];
-
   void _sendMessage() {
-    if (_controller.text.trim().isEmpty) return;
-    setState(() {
-      _messages.add({
-        'text': _controller.text.trim(),
-        'isMe': true,
-        'time': '10:05 AM',
-      });
-      _controller.clear();
-    });
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
 
-    // Mock response
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _messages.add({
-            'text': 'An admin will get back to you shortly.',
-            'isMe': false,
-            'time': '10:06 AM',
-          });
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+
+    FirebaseFirestore.instance
+        .collection('support_chats')
+        .doc(user.id)
+        .collection('messages')
+        .add({
+          'text': text,
+          'isMe': true,
+          'timestamp': FieldValue.serverTimestamp(),
+          'senderName': user.name,
         });
-      }
-    });
+
+    _controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text('Please login')));
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -68,56 +64,86 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return Align(
-                  alignment: msg['isMe']
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: msg['isMe']
-                          ? AppColors.primary
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(msg['isMe'] ? 16 : 0),
-                        bottomRight: Radius.circular(msg['isMe'] ? 0 : 16),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('support_chats')
+                  .doc(user.id)
+                  .collection('messages')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.all(20),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final isMe = data['isMe'] ?? false;
+                    final text = data['text'] ?? '';
+                    final timestamp = data['timestamp'] as Timestamp?;
+
+                    String timeStr = '';
+                    if (timestamp != null) {
+                      final dt = timestamp.toDate();
+                      timeStr =
+                          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                    }
+
+                    return Align(
+                      alignment: isMe
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isMe
+                              ? AppColors.primary
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(16),
+                            topRight: const Radius.circular(16),
+                            bottomLeft: Radius.circular(isMe ? 16 : 0),
+                            bottomRight: Radius.circular(isMe ? 0 : 16),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              text,
+                              style: TextStyle(
+                                color: isMe ? Colors.white : AppColors.black,
+                                fontSize: 14,
+                              ),
+                            ),
+                            if (timeStr.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                timeStr,
+                                style: TextStyle(
+                                  color: isMe ? Colors.white70 : Colors.grey,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          msg['text'],
-                          style: TextStyle(
-                            color: msg['isMe'] ? Colors.white : AppColors.black,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          msg['time'],
-                          style: TextStyle(
-                            color: msg['isMe'] ? Colors.white70 : Colors.grey,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),

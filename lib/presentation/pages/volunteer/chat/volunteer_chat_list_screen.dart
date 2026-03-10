@@ -1,5 +1,13 @@
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:provider/provider.dart';
+// import '../../../../core/app_constants.dart';
+// import '../../../providers/auth_provider.dart';
+// import 'volunteer_chat_details_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/app_constants.dart';
+import '../../../providers/auth_provider.dart';
 import 'volunteer_chat_details_screen.dart';
 
 class VolunteerChatListScreen extends StatefulWidget {
@@ -12,52 +20,15 @@ class VolunteerChatListScreen extends StatefulWidget {
 
 class _VolunteerChatListScreenState extends State<VolunteerChatListScreen> {
   // Mock data for seniors/needy
-  final List<Map<String, dynamic>> _chats = [
-    {
-      'name': 'Lincoln Workman',
-      'message': 'HELLO',
-      'image': 'https://i.pravatar.cc/150?img=11',
-      'status': 'seen',
-    },
-    {
-      'name': 'Gustavo Dias',
-      'message': 'HELLO',
-      'image': 'https://i.pravatar.cc/150?img=5',
-      'status': 'seen',
-    },
-    {
-      'name': 'Jocelyn Schleifer',
-      'message': 'HELLO',
-      'image': 'https://i.pravatar.cc/150?img=3',
-      'status': 'seen',
-    },
-    {
-      'name': 'Rayna Dias',
-      'message': 'HELLO',
-      'image': 'https://i.pravatar.cc/150?img=9',
-      'status': 'seen',
-    },
-    {
-      'name': 'Leo Bergson',
-      'message': 'HELLO',
-      'image': 'https://i.pravatar.cc/150?img=8',
-      'status': 'seen',
-    },
-    {
-      'name': 'Justin Geidt',
-      'message': 'HELLO',
-      'image': 'https://i.pravatar.cc/150?img=2',
-      'status': 'seen',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final currentUserId = context.read<AuthProvider>().user?.id ?? '';
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'chat',
+          'Chat',
           style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
         ),
         automaticallyImplyLeading: false,
@@ -65,47 +36,90 @@ class _VolunteerChatListScreenState extends State<VolunteerChatListScreen> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        itemCount: _chats.length,
-        separatorBuilder: (context, index) =>
-            const Divider(height: 1, indent: 80),
-        itemBuilder: (context, index) {
-          final chat = _chats[index];
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            leading: CircleAvatar(
-              radius: 28,
-              backgroundImage: NetworkImage(chat['image']),
-            ),
-            title: Text(
-              chat['name'],
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            subtitle: Row(
-              children: [
-                Icon(Icons.done_all, size: 16, color: Colors.blue.shade400),
-                const SizedBox(width: 4),
-                Text(
-                  chat['message'],
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('help_requests')
+            .where('volunteerId', isEqualTo: currentUserId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data!.docs;
+
+          if (docs.isEmpty) {
+            return Center(
+              child: Text(
+                'No active chats.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            itemCount: docs.length,
+            separatorBuilder: (context, index) =>
+                const Divider(height: 1, indent: 80),
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+              final taskId = docs[index].id;
+              final taskTitle = data['title'] ?? 'Task';
+              final requesterId = data['userId'] ?? '';
+              final requesterName = data['userName'] ?? 'Senior User';
+              final requesterPhoto = data['requesterPhoto'] ?? '';
+
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
                 ),
-              ],
-            ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => VolunteerChatDetailsScreen(
-                    taskId: 'mock_task_id',
-                    currentUserId: 'mock_current_user',
-                    userName: chat['name'],
-                    userAvatar: chat['image'],
+                leading: CircleAvatar(
+                  radius: 28,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child:
+                      requesterPhoto.isNotEmpty &&
+                          requesterPhoto.startsWith('http')
+                      ? null
+                      : Text(
+                          requesterName[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                  backgroundImage:
+                      requesterPhoto.isNotEmpty &&
+                          requesterPhoto.startsWith('http')
+                      ? NetworkImage(requesterPhoto)
+                      : null,
+                ),
+                title: Text(
+                  requesterName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
+                subtitle: Text(
+                  'Task: $taskTitle',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VolunteerChatDetailsScreen(
+                        taskId: taskId,
+                        currentUserId: currentUserId,
+                        userName: requesterName,
+                        userAvatar: requesterPhoto,
+                        recipientId: requesterId,
+                      ),
+                    ),
+                  );
+                },
               );
             },
           );

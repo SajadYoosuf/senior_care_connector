@@ -1,11 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/app_constants.dart';
+import '../../../../data/repositories/activity_log_repository.dart';
 
 class AdminSeniorDetailsScreen extends StatelessWidget {
-  const AdminSeniorDetailsScreen({super.key});
+  final Map<String, dynamic> senior;
+  final ActivityLogRepository _activityLogRepository = ActivityLogRepository();
+
+  AdminSeniorDetailsScreen({super.key, required this.senior});
 
   @override
   Widget build(BuildContext context) {
+    final String seniorId = senior['id'] ?? '';
+    final String name = senior['name'] ?? 'Senior';
+    final String status = senior['status'] ?? 'Active';
+    final String age = senior['age']?.toString() ?? 'N/A';
+    final String dob = senior['dob'] ?? 'N/A';
+    final String phone = senior['phone'] ?? 'N/A';
+    final String address = senior['address'] ?? 'N/A';
+    final String emergencyContact = senior['emergencyContact'] ?? 'N/A';
+    final String emergencyPhone = senior['emergencyPhone'] ?? 'N/A';
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
       appBar: AppBar(
@@ -16,7 +31,7 @@ class AdminSeniorDetailsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Seniors profile',
+          'Senior Profile',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -48,9 +63,15 @@ class AdminSeniorDetailsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      'https://i.pravatar.cc/150?img=12',
+                  child: CircleAvatar(
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -70,21 +91,25 @@ class AdminSeniorDetailsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Jordyn Vetrovs',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: status.toLowerCase().contains('high')
+                    ? Colors.red.shade50
+                    : Colors.green.shade50,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'High care',
+              child: Text(
+                status,
                 style: TextStyle(
-                  color: Colors.red,
+                  color: status.toLowerCase().contains('high')
+                      ? Colors.red
+                      : Colors.green,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -156,19 +181,19 @@ class AdminSeniorDetailsScreen extends StatelessWidget {
                   _buildInfoRow(
                     icon: Icons.assignment_ind_outlined,
                     title: 'Age / Dob',
-                    value: '82 years (may 14,1942)',
+                    value: '$age years ($dob)',
                   ),
                   const Divider(height: 32),
                   _buildInfoRow(
                     icon: Icons.phone_outlined,
                     title: 'Phone Number',
-                    value: '+1 (555)123456789',
+                    value: phone,
                   ),
                   const Divider(height: 32),
                   _buildInfoRow(
                     icon: Icons.location_on_outlined,
                     title: 'Address',
-                    value: '200 Dutch Meadows Ln, Glenville NY 12302',
+                    value: address,
                   ),
                 ],
               ),
@@ -210,20 +235,23 @@ class AdminSeniorDetailsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Sarah (daughter)',
-                          style: TextStyle(
+                          emergencyContact,
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                           ),
                         ),
                         Text(
-                          '+1 (555)123456789',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          emergencyPhone,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -243,9 +271,133 @@ class AdminSeniorDetailsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 32),
+
+            // Safety Timeline
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Safety Timeline',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _activityLogRepository.getSeniorLogs(seniorId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'No safety logs recorded for this senior.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+
+                final logs = snapshot.data!;
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: logs.length,
+                  itemBuilder: (context, index) {
+                    final log = logs[index];
+                    final timestamp = log['timestamp'] as Timestamp?;
+                    final dateStr = timestamp != null
+                        ? DateFormat(
+                            'MMM d, hh:mm a',
+                          ).format(timestamp.toDate())
+                        : 'Just now';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: Row(
+                        children: [
+                          _getLogIcon(log['action']),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  log['details'] ?? 'Activity',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  dateStr,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _getLogIcon(String? action) {
+    IconData icon;
+    Color color;
+
+    switch (action) {
+      case 'SOS_TRIGGERED':
+        icon = Icons.error_outline;
+        color = Colors.red;
+        break;
+      case 'MEDICINE_TAKEN':
+        icon = Icons.medication;
+        color = Colors.blue;
+        break;
+      case 'TASK_COMPLETED':
+        icon = Icons.check_circle_outline;
+        color = Colors.green;
+        break;
+      default:
+        icon = Icons.info_outline;
+        color = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: color, size: 20),
     );
   }
 

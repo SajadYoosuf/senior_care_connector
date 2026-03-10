@@ -74,7 +74,7 @@ class ScheduleScreen extends StatelessWidget {
                           subtitle: '${m['frequency']} . ${m['time']}',
                           time: m['time'] ?? '',
                           isCompleted:
-                              false, // Medicine has no complete status in mock
+                              false, // Medicines are tracked via activity logs
                           type: 'pill',
                         ),
                       );
@@ -233,12 +233,7 @@ class ScheduleScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: iconBgColor,
               borderRadius: BorderRadius.circular(12),
-              image: (reminder.type == 'visit')
-                  ? const DecorationImage(
-                      image: NetworkImage('https://i.pravatar.cc/150?img=5'),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+              image: null,
             ),
             child: (reminder.type == 'visit')
                 ? null

@@ -10,6 +10,8 @@ class AdminProvider extends ChangeNotifier {
   int _todayVisitCount = 0;
   List<Map<String, dynamic>> _seniors = [];
   List<Map<String, dynamic>> _volunteers = [];
+  List<Map<String, dynamic>> _activeSOSAlerts = [];
+  List<Map<String, dynamic>> _recentLogs = [];
 
   int get seniorCount => _seniorCount;
   int get volunteerCount => _volunteerCount;
@@ -17,6 +19,8 @@ class AdminProvider extends ChangeNotifier {
   int get todayVisitCount => _todayVisitCount;
   List<Map<String, dynamic>> get seniors => _seniors;
   List<Map<String, dynamic>> get volunteers => _volunteers;
+  List<Map<String, dynamic>> get activeSOSAlerts => _activeSOSAlerts;
+  List<Map<String, dynamic>> get recentLogs => _recentLogs;
 
   AdminProvider() {
     _initStats();
@@ -67,6 +71,32 @@ class AdminProvider extends ChangeNotifier {
         .snapshots()
         .listen((snapshot) {
           _todayVisitCount = snapshot.docs.length; // Simplified for now
+          notifyListeners();
+        });
+
+    // Listen to Active SOS Alerts
+    _firestore
+        .collection('sos_alerts')
+        .where('status', isEqualTo: 'Active')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+          _activeSOSAlerts = snapshot.docs
+              .map((doc) => {'id': doc.id, ...doc.data()})
+              .toList();
+          notifyListeners();
+        });
+
+    // Listen to Recent Activity Logs
+    _firestore
+        .collection('activity_logs')
+        .orderBy('timestamp', descending: true)
+        .limit(20)
+        .snapshots()
+        .listen((snapshot) {
+          _recentLogs = snapshot.docs
+              .map((doc) => {'id': doc.id, ...doc.data()})
+              .toList();
           notifyListeners();
         });
   }

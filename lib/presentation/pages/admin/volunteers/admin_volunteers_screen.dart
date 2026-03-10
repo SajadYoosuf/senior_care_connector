@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app/core/app_constants.dart';
 import 'package:app/presentation/providers/admin_provider.dart';
+import 'admin_volunteer_details_screen.dart';
 
 class AdminVolunteersScreen extends StatefulWidget {
   const AdminVolunteersScreen({super.key});
@@ -67,12 +68,24 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
                     itemCount: volunteers.length,
                     itemBuilder: (context, index) {
                       final volunteer = volunteers[index];
-                      return _buildVolunteerCard(
-                        name: volunteer['name'] ?? 'Unknown',
-                        skills: volunteer['skills'] ?? 'General Volunteer',
-                        status: volunteer['status'] ?? 'Active',
-                        points: volunteer['points']?.toString() ?? '0',
-                        rank: (index + 1).toString(),
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AdminVolunteerDetailsScreen(
+                                volunteer: volunteer,
+                              ),
+                            ),
+                          );
+                        },
+                        child: _buildVolunteerCard(
+                          name: volunteer['name'] ?? 'Unknown',
+                          skills: volunteer['skills'] ?? 'General Volunteer',
+                          status: volunteer['status'] ?? 'Active',
+                          points: volunteer['points']?.toString() ?? '0',
+                          rank: (index + 1).toString(),
+                        ),
                       );
                     },
                   ),

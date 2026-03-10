@@ -95,6 +95,7 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
                     itemBuilder: (context, index) {
                       final senior = filteredSeniors[index];
                       return _buildSeniorCard(
+                        senior: senior,
                         name: senior['name'] ?? 'Unknown',
                         location:
                             senior['room'] ??
@@ -136,6 +137,7 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
   }
 
   Widget _buildSeniorCard({
+    required Map<String, dynamic> senior,
     required String name,
     required String location,
     required String status,
@@ -167,7 +169,7 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const AdminSeniorDetailsScreen(),
+            builder: (context) => AdminSeniorDetailsScreen(senior: senior),
           ),
         );
       },

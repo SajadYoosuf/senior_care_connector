@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../../../core/app_constants.dart';
+import '../../../../agora_logic.dart';
 
 class VolunteerContactScreen extends StatelessWidget {
-  const VolunteerContactScreen({super.key});
+  final String userName;
+  final String channelName;
+  final String userAvatar;
+
+  const VolunteerContactScreen({
+    super.key,
+    required this.userName,
+    required this.channelName,
+    this.userAvatar = '',
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Or very light grey
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -16,7 +26,10 @@ class VolunteerContactScreen extends StatelessWidget {
           'Contact',
           style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
         ),
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
@@ -26,16 +39,18 @@ class VolunteerContactScreen extends StatelessWidget {
             child: Stack(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(4), // Border space
+                  padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white, // or grey shade
+                    color: Colors.white,
                   ),
-                  child: const CircleAvatar(
+                  child: CircleAvatar(
                     radius: 60,
                     backgroundImage: NetworkImage(
-                      'https://i.pravatar.cc/150?img=11',
-                    ), // Phillip
+                      userAvatar.isNotEmpty
+                          ? userAvatar
+                          : 'https://i.pravatar.cc/150?u=$userName',
+                    ),
                   ),
                 ),
                 Positioned(
@@ -45,7 +60,7 @@ class VolunteerContactScreen extends StatelessWidget {
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: Colors.green, // Available/Online status
+                      color: Colors.green,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
                     ),
@@ -55,9 +70,9 @@ class VolunteerContactScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Phillip Lipshutz',
-            style: TextStyle(
+          Text(
+            userName,
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppColors.black,
@@ -73,10 +88,14 @@ class VolunteerContactScreen extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.shopping_cart, size: 16, color: Colors.blue),
+                const Icon(
+                  Icons.volunteer_activism,
+                  size: 16,
+                  color: Colors.blue,
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  'Groceries',
+                  'Community Member',
                   style: TextStyle(
                     color: Colors.blue.shade700,
                     fontWeight: FontWeight.bold,
@@ -87,7 +106,7 @@ class VolunteerContactScreen extends StatelessWidget {
           ),
           const SizedBox(height: 30),
           Text(
-            'Ready to connect with phillip ?',
+            'Ready to connect with ${userName.split(' ')[0]}?',
             style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
           const SizedBox(height: 30),
@@ -98,7 +117,7 @@ class VolunteerContactScreen extends StatelessWidget {
             height: 180,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.blue, // Primary
+              color: Colors.blue,
               boxShadow: [
                 BoxShadow(
                   color: Colors.blue.withOpacity(0.3),
@@ -111,7 +130,17 @@ class VolunteerContactScreen extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VideoCallScreen(
+                        channelName: channelName,
+                        isAudioOnly: true,
+                      ),
+                    ),
+                  );
+                },
                 child: const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -132,7 +161,7 @@ class VolunteerContactScreen extends StatelessWidget {
           ),
           const SizedBox(height: 30),
           Text(
-            'This call will connect you directly to him primary line\nvia the community app',
+            'This call will connect you directly to their primary line\nvia the community app',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey.shade400,
@@ -160,14 +189,36 @@ class VolunteerContactScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildOptionItem(Icons.message, 'Message', Colors.blue),
-                _buildOptionItem(Icons.videocam, 'Video Call', Colors.blue),
+                _buildOptionItem(
+                  context,
+                  Icons.message,
+                  'Message',
+                  Colors.blue,
+                  onTap: () => Navigator.pop(context),
+                ),
+                _buildOptionItem(
+                  context,
+                  Icons.videocam,
+                  'Video Call',
+                  Colors.blue,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VideoCallScreen(
+                          channelName: channelName,
+                          isAudioOnly: false,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
           const SizedBox(height: 10),
           Text(
-            'call are routed rough our secure system to protect privacy', // Typo in image "rough" -> "through"? I'll keep image text or fix? Let's fix it slightly to "through" for quality but "rough" if strict. I'll use "through".
+            'calls are routed through our secure system to protect privacy',
             style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
           ),
           const SizedBox(height: 20),
@@ -176,27 +227,36 @@ class VolunteerContactScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOptionItem(IconData icon, String label, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
+  Widget _buildOptionItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 30),
           ),
-          child: Icon(icon, color: color, size: 30),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: AppColors.black,
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: AppColors.black,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

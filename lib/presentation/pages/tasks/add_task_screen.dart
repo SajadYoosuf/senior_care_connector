@@ -1,5 +1,6 @@
 ﻿import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:alarm/alarm.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
@@ -140,6 +141,26 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         'status': 'Pending',
         'createdAt': DateTime.now().toIso8601String(),
       });
+
+      // Schedule Alarm
+      final alarmSettings = AlarmSettings(
+        id: scheduledAt.millisecondsSinceEpoch % 100000,
+        dateTime: scheduledAt,
+        assetAudioPath: null,
+        loopAudio: true,
+        vibrate: true,
+        volumeSettings: VolumeSettings.fade(
+          volume: 0.8,
+          fadeDuration: const Duration(seconds: 5),
+        ),
+        notificationSettings: NotificationSettings(
+          title: 'Task Reminder: ${_titleController.text.trim()}',
+          body: 'It\'s time for your scheduled task: ${_selectedCategory!}',
+          stopButton: 'Stop',
+          icon: 'notification_icon',
+        ),
+      );
+      await Alarm.set(alarmSettings: alarmSettings);
 
       if (!mounted) return;
       _showSuccessDialog();

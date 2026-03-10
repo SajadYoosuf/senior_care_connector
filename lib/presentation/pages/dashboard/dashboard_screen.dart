@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../core/app_constants.dart';
 import '../../../core/app_localizations.dart';
 import '../../providers/auth_provider.dart';
@@ -12,9 +12,13 @@ import '../notifications/notification_screen.dart';
 import '../medicine/medicine_reminder_screen.dart';
 import '../requests/current_requests_screen.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../data/repositories/sos_repository.dart';
+import '../../../agora_logic.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
+
+  static final SOSRepository _sosRepository = SOSRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +96,22 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   Row(
                     children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const VideoCallScreen(
+                                channelName: 'senior_care_test',
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.videocam_outlined,
+                          color: AppColors.primary,
+                        ),
+                      ),
                       IconButton(
                         onPressed: () => _showLanguageBottomSheet(context),
                         icon: const Icon(Icons.language),
@@ -285,17 +305,15 @@ class DashboardScreen extends StatelessWidget {
                         // Ignored
                       }
 
-                      await FirebaseFirestore.instance
-                          .collection('sos_alerts')
-                          .add({
-                            'userId': user.id,
-                            'userName': user.name,
-                            if (position != null) 'latitude': position.latitude,
-                            if (position != null)
-                              'longitude': position.longitude,
-                            'status': 'Active',
-                            'createdAt': FieldValue.serverTimestamp(),
-                          });
+                      await _sosRepository.sendSOSAlert(
+                        userId: user.id,
+                        userName: user.name,
+                        latitude: position?.latitude,
+                        longitude: position?.longitude,
+                        locationUrl: position != null
+                            ? 'https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}'
+                            : null,
+                      );
 
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(

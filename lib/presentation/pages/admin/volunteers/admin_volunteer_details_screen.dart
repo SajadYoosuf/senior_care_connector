@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import '../../../../core/app_constants.dart';
 
 class AdminVolunteerDetailsScreen extends StatelessWidget {
-  const AdminVolunteerDetailsScreen({super.key});
+  final Map<String, dynamic> volunteer;
+  const AdminVolunteerDetailsScreen({super.key, required this.volunteer});
 
   @override
   Widget build(BuildContext context) {
+    final String name = volunteer['name'] ?? 'Volunteer';
+    final String email = volunteer['email'] ?? 'N/A';
+    final String phone = volunteer['phone'] ?? 'N/A';
+    final String status = volunteer['status'] ?? 'Active';
+    final String photoUrl =
+        volunteer['profileImageUrl'] ??
+        'https://i.pravatar.cc/150?u=${volunteer['id']}';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
       appBar: AppBar(
@@ -16,15 +25,9 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Volunteers',
+          'Volunteer Profile',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none, color: Colors.black),
-          ),
-        ],
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -32,26 +35,27 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
         child: Column(
           children: [
             // Profile Header
-            const CircleAvatar(
-              radius: 60,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=13'),
-            ),
+            CircleAvatar(radius: 60, backgroundImage: NetworkImage(photoUrl)),
             const SizedBox(height: 16),
-            const Text(
-              'Ashlynn Calzoni',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: status.toLowerCase() == 'pending'
+                    ? Colors.red.shade50
+                    : Colors.green.shade50,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'Pending',
+              child: Text(
+                status,
                 style: TextStyle(
-                  color: Colors.red,
+                  color: status.toLowerCase() == 'pending'
+                      ? Colors.red
+                      : Colors.green,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -119,13 +123,13 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
                   _buildInfoRow(
                     icon: Icons.email_outlined,
                     title: 'Email Address',
-                    value: 'allison_garcia@gmail.com',
+                    value: email,
                   ),
                   const Divider(height: 32),
                   _buildInfoRow(
                     icon: Icons.phone_outlined,
                     title: 'Phone Number',
-                    value: '+1 (555)123456789',
+                    value: phone,
                   ),
                 ],
               ),

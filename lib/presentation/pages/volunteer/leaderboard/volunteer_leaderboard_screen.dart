@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -48,17 +49,34 @@ class _VolunteerLeaderboardScreenState
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            _buildTabSelector(l10n),
-            const SizedBox(height: 30),
-            _buildPodium(l10n),
-            const SizedBox(height: 40),
-            _buildTopVolunteersList(l10n),
-          ],
-        ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .where('role', whereIn: ['volunteer', 'both'])
+            .orderBy('points', descending: true)
+            .limit(20)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final volunteers = snapshot.data!.docs;
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                _buildTabSelector(l10n),
+                const SizedBox(height: 30),
+                if (volunteers.isNotEmpty) _buildPodium(l10n, volunteers),
+                const SizedBox(height: 40),
+                if (volunteers.length > 3)
+                  _buildTopVolunteersList(l10n, volunteers.sublist(3)),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -142,7 +160,18 @@ class _VolunteerLeaderboardScreenState
     );
   }
 
-  Widget _buildPodium(AppLocalizations l10n) {
+  Widget _buildPodium(
+    AppLocalizations l10n,
+    List<QueryDocumentSnapshot> volunteers,
+  ) {
+    final first = volunteers[0].data() as Map<String, dynamic>;
+    final second = volunteers.length > 1
+        ? volunteers[1].data() as Map<String, dynamic>
+        : null;
+    final third = volunteers.length > 2
+        ? volunteers[2].data() as Map<String, dynamic>
+        : null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -150,44 +179,52 @@ class _VolunteerLeaderboardScreenState
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // 2nd Place
-          _buildPodiumItem(
-            name: 'Elena R.',
-            points: '2,480',
-            rank: '2',
-            badgeLabel: l10n.silverBadge,
-            badgeColor: Colors.blue.shade100,
-            textColor: Colors.blue.shade700,
-            imageUrl: 'https://i.pravatar.cc/150?img=1',
-            radius: 45,
-            rankY: 0,
-            isCenter: false,
-          ),
+          if (second != null)
+            _buildPodiumItem(
+              name: second['name'] ?? 'Volunteer',
+              points: (second['points'] ?? 0).toString(),
+              rank: '2',
+              badgeLabel: l10n.silverBadge,
+              badgeColor: Colors.blue.shade100,
+              textColor: Colors.blue.shade700,
+              imageUrl:
+                  second['profileImageUrl'] ??
+                  'https://i.pravatar.cc/150?u=${volunteers[1].id}',
+              radius: 45,
+              rankY: 0,
+              isCenter: false,
+            ),
           // 1st Place
           _buildPodiumItem(
-            name: 'James Miller',
-            points: '3,120',
+            name: first['name'] ?? 'Volunteer',
+            points: (first['points'] ?? 0).toString(),
             rank: '1',
             badgeLabel: l10n.goldBadge,
             badgeColor: Colors.amber.shade100,
             textColor: Colors.amber.shade800,
-            imageUrl: 'https://i.pravatar.cc/150?img=2',
+            imageUrl:
+                first['profileImageUrl'] ??
+                'https://i.pravatar.cc/150?u=${volunteers[0].id}',
             radius: 55,
             rankY: -10,
             isCenter: true,
           ),
           // 3rd Place
-          _buildPodiumItem(
-            name: 'Sarah K.',
-            points: '2,150',
-            rank: '3',
-            badgeLabel: l10n.bronzeBadge,
-            badgeColor: Colors.orange.shade100,
-            textColor: Colors.orange.shade800,
-            imageUrl: 'https://i.pravatar.cc/150?img=3',
-            radius: 40,
-            rankY: 0,
-            isCenter: false,
-          ),
+          if (third != null)
+            _buildPodiumItem(
+              name: third['name'] ?? 'Volunteer',
+              points: (third['points'] ?? 0).toString(),
+              rank: '3',
+              badgeLabel: l10n.bronzeBadge,
+              badgeColor: Colors.orange.shade100,
+              textColor: Colors.orange.shade800,
+              imageUrl:
+                  third['profileImageUrl'] ??
+                  'https://i.pravatar.cc/150?u=${volunteers[2].id}',
+              radius: 40,
+              rankY: 0,
+              isCenter: false,
+            ),
         ],
       ),
     );
@@ -304,7 +341,10 @@ class _VolunteerLeaderboardScreenState
     );
   }
 
-  Widget _buildTopVolunteersList(AppLocalizations l10n) {
+  Widget _buildTopVolunteersList(
+    AppLocalizations l10n,
+    List<QueryDocumentSnapshot> volunteers,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(top: 20),
@@ -324,42 +364,25 @@ class _VolunteerLeaderboardScreenState
             ),
           ),
           const SizedBox(height: 16),
-          _buildVolunteerListItem(
-            rank: '4',
-            name: 'Marcus Chen',
-            stats: '18 sessions • 1,890 pts',
-            change: '+12%',
-            changeColor: Colors.blue,
-            imageUrl: 'https://i.pravatar.cc/150?img=4',
-            hasBadge: true,
-          ),
-          _buildVolunteerListItem(
-            rank: '5',
-            name: 'Chloe Davis',
-            stats: '15 sessions • 1,650 pts',
-            change: l10n.steady,
-            changeColor: Colors.grey,
-            imageUrl: 'https://i.pravatar.cc/150?img=5',
-            hasBadge: true,
-            badgeIcon: Icons.verified_user,
-          ),
+          ...volunteers.asMap().entries.map((entry) {
+            final index = entry.key;
+            final doc = entry.value;
+            final data = doc.data() as Map<String, dynamic>;
+
+            return _buildVolunteerListItem(
+              rank: (index + 4).toString(),
+              name: data['name'] ?? 'Volunteer',
+              stats:
+                  '${data['completedTasks'] ?? 0} sessions • ${data['points'] ?? 0} pts',
+              change: '+0', // This could be calculated if history exists
+              changeColor: Colors.blue,
+              imageUrl:
+                  data['profileImageUrl'] ??
+                  'https://i.pravatar.cc/150?u=${doc.id}',
+              hasBadge: (data['completedTasks'] ?? 0) > 10,
+            );
+          }),
           _buildYourRankCard(l10n),
-          _buildVolunteerListItem(
-            rank: '6',
-            name: 'David Wilson',
-            stats: '12 sessions • 1,420 pts',
-            change: '-2',
-            changeColor: Colors.red.shade300,
-            imageUrl: 'https://i.pravatar.cc/150?img=6',
-          ),
-          _buildVolunteerListItem(
-            rank: '7',
-            name: 'Sophia Martinez',
-            stats: '11 sessions • 1,380 pts',
-            change: '+5',
-            changeColor: Colors.blue,
-            imageUrl: 'https://i.pravatar.cc/150?img=7',
-          ),
           const SizedBox(height: 100),
         ],
       ),
