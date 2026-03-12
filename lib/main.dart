@@ -9,6 +9,8 @@ import 'core/app_constants.dart';
 import 'core/app_localizations.dart';
 import 'theme/app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart' as fcm;
 import 'firebase_options.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -40,22 +42,61 @@ Future<void> _firebaseMessagingBackgroundHandler(
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   debugPrint("Handling a background message: ${message.messageId}");
 
-  // Check if this is an SOS message
-  if (message.data['type'] == 'sos') {
+  final type = message.data['type'];
+  final majorTypes = ['sos', 'chat', 'task_accepted', 'task_completed'];
+
+  if (majorTypes.contains(type)) {
     await Alarm.init();
 
-    final String userName = message.data['userName'] ?? 'Someone';
+    String title = message.notification?.title ?? 'Alert';
+    String body = message.notification?.body ?? 'Major update received';
+    int alarmId = 9999;
+    bool loop = true;
+
+    if (type == 'sos') {
+      alarmId = 9991;
+      final userName = message.data['userName'] ?? 'Someone';
+      title = '🚨 SOS EMERGENCY: $userName';
+      body = 'Requires immediate help! Tap to view location.';
+    } else if (type == 'chat') {
+      alarmId = 9992;
+      loop = false; // Chat maybe doesn't need to loop forever
+    } else if (type == 'task_accepted') {
+      alarmId = 9993;
+    } else if (type == 'task_completed') {
+      alarmId = 9994;
+    }
+
+    // Try to get user's preferred tone
+    String? tonePath;
+    bool vibrate = true;
+
+    try {
+      final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .get();
+        if (userDoc.exists) {
+          tonePath = userDoc.data()?['alarmTone'];
+          vibrate = userDoc.data()?['vibrationEnabled'] ?? true;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching user tone in background: $e');
+    }
 
     final alarmSettings = AlarmSettings(
-      id: 9999, // Unique ID for SOS
+      id: alarmId,
       dateTime: DateTime.now().add(const Duration(seconds: 1)),
-      assetAudioPath: null, // null for default alarm sound
-      loopAudio: true,
-      vibrate: true,
+      assetAudioPath: tonePath,
+      loopAudio: loop,
+      vibrate: vibrate,
       volumeSettings: const VolumeSettings.fixed(volume: 1.0),
       notificationSettings: NotificationSettings(
-        title: '🚨 SOS EMERGENCY: $userName',
-        body: 'Requires immediate help! Tap to open app and view location.',
+        title: title,
+        body: body,
         stopButton: 'Stop',
         icon: 'ic_launcher',
       ),

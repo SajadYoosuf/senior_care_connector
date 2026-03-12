@@ -55,6 +55,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         'taskId': widget.taskId,
         'senderId': widget.currentUserId,
       },
+      channelId: 'sos_alerts',
     );
 
     _messageController.clear();

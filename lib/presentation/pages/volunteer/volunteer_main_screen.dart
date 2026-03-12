@@ -142,6 +142,10 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
       stream: FirebaseFirestore.instance
           .collection('sos_alerts')
           .where('status', isEqualTo: 'Active')
+          .where(
+            'createdAt',
+            isGreaterThan: DateTime.now().subtract(const Duration(minutes: 30)),
+          )
           .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {

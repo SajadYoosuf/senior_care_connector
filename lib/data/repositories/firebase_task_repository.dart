@@ -109,6 +109,7 @@ class FirebaseTaskRepository implements TaskRepository {
         title: 'Help is on the way!',
         body: 'A volunteer has accepted your request: ${task.title}',
         data: {'type': 'task_accepted', 'taskId': taskId},
+        channelId: 'sos_alerts',
       );
     }
   }
@@ -165,6 +166,7 @@ class FirebaseTaskRepository implements TaskRepository {
         body:
             'Your request "$taskTitle" has been marked as completed. Thank you!',
         data: {'type': 'task_completed', 'taskId': taskId},
+        channelId: 'sos_alerts',
       );
     }
   }
