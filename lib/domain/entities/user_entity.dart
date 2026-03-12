@@ -12,6 +12,8 @@ class UserEntity {
   final String badge; // 'None', 'Bronze', 'Silver', 'Gold'
   final String? profileImageUrl;
   final String? profession;
+  final String? alarmTone;
+  final bool vibrationEnabled;
 
   const UserEntity({
     required this.id,
@@ -27,5 +29,7 @@ class UserEntity {
     this.badge = 'None',
     this.profileImageUrl,
     this.profession,
+    this.alarmTone,
+    this.vibrationEnabled = true,
   });
 }

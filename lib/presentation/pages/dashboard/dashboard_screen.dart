@@ -13,7 +13,6 @@ import '../medicine/medicine_reminder_screen.dart';
 import '../requests/current_requests_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../data/repositories/sos_repository.dart';
-import '../../../agora_logic.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -96,36 +95,43 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const VideoCallScreen(
-                                channelName: 'senior_care_test',
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.videocam_outlined,
-                          color: AppColors.primary,
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: IconButton(
+                          onPressed: () => _showLanguageBottomSheet(context),
+                          icon: const Icon(
+                            Icons.language,
+                            color: AppColors.black,
+                            size: 20,
+                          ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => _showLanguageBottomSheet(context),
-                        icon: const Icon(Icons.language),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NotificationScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.notifications_outlined),
+                      const SizedBox(width: 8), // Added for spacing
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NotificationScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.notifications_outlined,
+                            color: AppColors.black,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ],
                   ),

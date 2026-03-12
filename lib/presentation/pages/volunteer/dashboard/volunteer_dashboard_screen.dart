@@ -10,7 +10,6 @@ import '../../../providers/task_provider.dart';
 import '../tasks/volunteer_task_list_screen.dart';
 import '../tasks/volunteer_my_tasks_screen.dart';
 import '../../notifications/notification_screen.dart';
-import '../../../../agora_logic.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -88,30 +87,6 @@ class VolunteerDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(width: 12),
           ],
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const VideoCallScreen(channelName: 'senior_care_test'),
-                  ),
-                );
-              },
-              icon: const Icon(
-                Icons.videocam_outlined,
-                color: AppColors.primary,
-                size: 20,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,

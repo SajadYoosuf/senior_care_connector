@@ -21,7 +21,14 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
     super.initState();
   }
 
-  Future<void> _scheduleAlarm(String name, TimeOfDay time, {int? id}) async {
+  Future<void> _scheduleAlarm(
+    String name,
+    TimeOfDay time, {
+    int? id,
+    String? tonePath,
+    bool vibrate = true,
+    double volume = 0.8,
+  }) async {
     final now = DateTime.now();
     var scheduledDate = DateTime(
       now.year,
@@ -38,12 +45,12 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
     final alarmSettings = AlarmSettings(
       id: id ?? DateTime.now().millisecondsSinceEpoch % 100000,
       dateTime: scheduledDate,
-      assetAudioPath: null,
+      assetAudioPath: tonePath, // Note: can be null for default
       loopAudio: true,
-      vibrate: true,
+      vibrate: vibrate,
       volumeSettings: VolumeSettings.fade(
-        volume: 0.8,
-        fadeDuration: Duration(seconds: 5),
+        volume: volume,
+        fadeDuration: const Duration(seconds: 5),
       ),
       notificationSettings: NotificationSettings(
         title: 'Medicine Reminder',
@@ -61,6 +68,8 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
     String frequency = existingData?['frequency'] ?? 'Daily';
     List<TimeOfDay> selectedTimes = [];
     List<int> selectedDays = []; // 1=Mon, 7=Sun
+    bool vibrate = existingData?['vibrate'] ?? true;
+    double volume = existingData?['volume'] ?? 0.8;
 
     if (existingData != null) {
       if (existingData['times'] != null) {
@@ -199,6 +208,23 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                       }).toList(),
                     ),
                   ],
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const Text(
+                    'Alarm Settings',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Vibration'),
+                    value: vibrate,
+                    onChanged: (v) => setModalState(() => vibrate = v),
+                  ),
+                  const Text('Volume'),
+                  Slider(
+                    value: volume,
+                    onChanged: (v) => setModalState(() => volume = v),
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -237,6 +263,8 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                               DateTime.now().toIso8601String(),
                           'lastTakenAt': existingData?['lastTakenAt'],
                           'lastTakenNote': existingData?['lastTakenNote'],
+                          'vibrate': vibrate,
+                          'volume': volume,
                         };
 
                         if (existingData != null) {
@@ -252,6 +280,9 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                             id:
                                 (nameCtrl.text.trim() + t.toString()).hashCode %
                                 100000,
+                            tonePath: user.alarmTone,
+                            vibrate: vibrate,
+                            volume: volume,
                           );
                         }
 

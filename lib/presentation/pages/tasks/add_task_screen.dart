@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
 import 'package:provider/provider.dart';
@@ -146,9 +146,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       final alarmSettings = AlarmSettings(
         id: scheduledAt.millisecondsSinceEpoch % 100000,
         dateTime: scheduledAt,
-        assetAudioPath: null,
+        assetAudioPath: user.alarmTone,
         loopAudio: true,
-        vibrate: true,
+        vibrate: user.vibrationEnabled,
         volumeSettings: VolumeSettings.fade(
           volume: 0.8,
           fadeDuration: const Duration(seconds: 5),

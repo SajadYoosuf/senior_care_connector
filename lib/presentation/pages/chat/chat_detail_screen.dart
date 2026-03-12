@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/app_constants.dart';
 import '../../../core/services/fcm_service.dart';
 import '../../../domain/entities/message_entity.dart';
-import '../volunteer/contact/volunteer_contact_screen.dart';
+import '../../../agora_logic.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String taskId;
@@ -124,37 +124,59 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              onPressed: () {
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.call, color: AppColors.primary),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            position: PopupMenuPosition.under,
+            onSelected: (value) {
+              if (value == 'voice') {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => VolunteerContactScreen(
-                      userName: widget.userName,
+                    builder: (context) => VideoCallScreen(
                       channelName: widget.taskId,
-                      userAvatar: widget.userAvatar,
+                      isAudioOnly: true,
                     ),
                   ),
                 );
-              },
-              icon: const Icon(Icons.call, size: 16, color: Colors.white),
-              label: const Text('Call', style: TextStyle(color: Colors.white)),
-            ),
+              } else if (value == 'video') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => VideoCallScreen(
+                      channelName: widget.taskId,
+                      isAudioOnly: false,
+                    ),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'voice',
+                child: Row(
+                  children: [
+                    Icon(Icons.phone_outlined, color: AppColors.primary),
+                    SizedBox(width: 12),
+                    Text('Voice Call'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'video',
+                child: Row(
+                  children: [
+                    Icon(Icons.videocam_outlined, color: AppColors.primary),
+                    SizedBox(width: 12),
+                    Text('Video Call'),
+                  ],
+                ),
+              ),
+            ],
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(

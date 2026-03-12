@@ -5,6 +5,7 @@ import '../../../core/app_localizations.dart';
 import '../login_screen.dart';
 import '../../providers/auth_provider.dart';
 import 'edit_profile_screen.dart';
+import '../../../core/services/ringtone_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -117,6 +118,14 @@ class ProfileScreen extends StatelessWidget {
             ),
 
             _buildProfileOption(
+              icon: Icons.notifications_none,
+              title: 'Notification Settings',
+              onTap: () {
+                _showNotificationSettings(context);
+              },
+            ),
+
+            _buildProfileOption(
               icon: Icons.help_outline,
               title: AppLocalizations.of(context).helpSupport,
               onTap: () {},
@@ -166,6 +175,62 @@ class ProfileScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showNotificationSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            final user = authProvider.user;
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Notification Settings',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 24),
+                  ListTile(
+                    leading: const Icon(Icons.music_note, color: Colors.blue),
+                    title: const Text('Alarm Tone'),
+                    subtitle: Text(
+                      user?.alarmTone != null
+                          ? 'Custom tone selected'
+                          : 'Default system tone',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      final uri = await RingtoneService.pickRingtone();
+                      if (uri != null) {
+                        await authProvider.setAlarmTone(uri);
+                      }
+                    },
+                  ),
+                  const Divider(),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.vibration, color: Colors.blue),
+                    title: const Text('Vibration'),
+                    value: user?.vibrationEnabled ?? true,
+                    onChanged: (val) {
+                      authProvider.toggleVibration();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

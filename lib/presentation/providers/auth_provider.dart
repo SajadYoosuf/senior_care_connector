@@ -53,6 +53,10 @@ class AuthProvider extends ChangeNotifier {
           points: _user!.points,
           completedTasks: _user!.completedTasks,
           badge: _user!.badge,
+          profileImageUrl: _user!.profileImageUrl,
+          profession: _user!.profession,
+          alarmTone: _user!.alarmTone,
+          vibrationEnabled: _user!.vibrationEnabled,
         );
       } catch (e) {
         debugPrint('Error updating online status: $e');
@@ -89,6 +93,10 @@ class AuthProvider extends ChangeNotifier {
         points: _user!.points,
         completedTasks: _user!.completedTasks,
         badge: _user!.badge,
+        profileImageUrl: _user!.profileImageUrl,
+        profession: _user!.profession,
+        alarmTone: _user!.alarmTone,
+        vibrationEnabled: _user!.vibrationEnabled,
       );
       notifyListeners();
     } catch (e) {
@@ -454,6 +462,16 @@ class AuthProvider extends ChangeNotifier {
           email: _user!.email,
           role: role,
           gender: _user!.gender,
+          isOnline: _user!.isOnline,
+          latitude: _user!.latitude,
+          longitude: _user!.longitude,
+          points: _user!.points,
+          completedTasks: _user!.completedTasks,
+          badge: _user!.badge,
+          profileImageUrl: _user!.profileImageUrl,
+          profession: _user!.profession,
+          alarmTone: _user!.alarmTone,
+          vibrationEnabled: _user!.vibrationEnabled,
         );
       }
       _isLoading = false;
@@ -478,6 +496,16 @@ class AuthProvider extends ChangeNotifier {
           email: _user!.email,
           role: _user!.role,
           gender: gender ?? _user!.gender,
+          isOnline: _user!.isOnline,
+          latitude: _user!.latitude,
+          longitude: _user!.longitude,
+          points: _user!.points,
+          completedTasks: _user!.completedTasks,
+          badge: _user!.badge,
+          profileImageUrl: _user!.profileImageUrl,
+          profession: _user!.profession,
+          alarmTone: _user!.alarmTone,
+          vibrationEnabled: _user!.vibrationEnabled,
         );
       }
       _isLoading = false;
@@ -534,6 +562,73 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('FCM Token saved to Firestore');
     } catch (e) {
       debugPrint('Error saving FCM Token: $e');
+    }
+  }
+
+  Future<void> setAlarmTone(String? toneUri) async {
+    if (_user == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.id)
+          .update({'alarmTone': toneUri});
+
+      _user = UserEntity(
+        id: _user!.id,
+        email: _user!.email,
+        name: _user!.name,
+        role: _user!.role,
+        gender: _user!.gender,
+        isOnline: _user!.isOnline,
+        latitude: _user!.latitude,
+        longitude: _user!.longitude,
+        points: _user!.points,
+        completedTasks: _user!.completedTasks,
+        badge: _user!.badge,
+        profileImageUrl: _user!.profileImageUrl,
+        profession: _user!.profession,
+        alarmTone: toneUri,
+        vibrationEnabled: _user!.vibrationEnabled,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating alarm tone: $e');
+      _errorMessage = 'Failed to update alarm tone';
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleVibration() async {
+    if (_user == null) return;
+    final newValue = !_user!.vibrationEnabled;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.id)
+          .update({'vibrationEnabled': newValue});
+
+      _user = UserEntity(
+        id: _user!.id,
+        email: _user!.email,
+        name: _user!.name,
+        role: _user!.role,
+        gender: _user!.gender,
+        isOnline: _user!.isOnline,
+        latitude: _user!.latitude,
+        longitude: _user!.longitude,
+        points: _user!.points,
+        completedTasks: _user!.completedTasks,
+        badge: _user!.badge,
+        profileImageUrl: _user!.profileImageUrl,
+        profession: _user!.profession,
+        alarmTone: _user!.alarmTone,
+        vibrationEnabled: newValue,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating vibration: $e');
+      _errorMessage = 'Failed to update vibration';
+      notifyListeners();
     }
   }
 }

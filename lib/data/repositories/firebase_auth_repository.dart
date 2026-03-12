@@ -44,6 +44,8 @@ class FirebaseAuthRepository implements AuthRepository {
             name: data['name'] ?? '',
             role: userRole,
             gender: data['gender'] ?? '',
+            alarmTone: data['alarmTone'],
+            vibrationEnabled: data['vibrationEnabled'] ?? true,
           );
 
           final prefs = await SharedPreferences.getInstance();
@@ -97,6 +99,8 @@ class FirebaseAuthRepository implements AuthRepository {
         if (profession != null && profession.isNotEmpty) {
           docData['profession'] = profession;
         }
+
+        docData['vibrationEnabled'] = true;
 
         await _firestore.collection('users').doc(user.id).set(docData);
 
@@ -187,6 +191,12 @@ class FirebaseAuthRepository implements AuthRepository {
           gender: doc.exists
               ? (doc.data() as Map<String, dynamic>)['gender'] ?? ''
               : '',
+          alarmTone: doc.exists
+              ? (doc.data() as Map<String, dynamic>)['alarmTone']
+              : null,
+          vibrationEnabled: doc.exists
+              ? (doc.data() as Map<String, dynamic>)['vibrationEnabled'] ?? true
+              : true,
         );
 
         // Persist session
@@ -233,6 +243,8 @@ class FirebaseAuthRepository implements AuthRepository {
           name: data['name'] ?? '',
           role: role,
           gender: data['gender'] ?? '',
+          alarmTone: data['alarmTone'],
+          vibrationEnabled: data['vibrationEnabled'] ?? true,
         );
       }
     }
