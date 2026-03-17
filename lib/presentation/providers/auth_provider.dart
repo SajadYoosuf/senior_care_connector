@@ -537,6 +537,10 @@ class AuthProvider extends ChangeNotifier {
           profession: _user!.profession,
           alarmTone: _user!.alarmTone,
           vibrationEnabled: _user!.vibrationEnabled,
+          age: _user!.age,
+          dob: _user!.dob,
+          phone: _user!.phone,
+          address: _user!.address,
         );
       }
       _isLoading = false;
@@ -549,11 +553,25 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateUserProfile({String? name, String? gender}) async {
+  Future<bool> updateUserProfile({
+    String? name,
+    String? gender,
+    String? age,
+    String? dob,
+    String? phone,
+    String? address,
+  }) async {
     _isLoading = true;
     notifyListeners();
     try {
-      await _authRepository.updateUserProfile(name: name, gender: gender);
+      await _authRepository.updateUserProfile(
+        name: name,
+        gender: gender,
+        age: age,
+        dob: dob,
+        phone: phone,
+        address: address,
+      );
       if (_user != null) {
         _user = UserEntity(
           id: _user!.id,
@@ -571,6 +589,10 @@ class AuthProvider extends ChangeNotifier {
           profession: _user!.profession,
           alarmTone: _user!.alarmTone,
           vibrationEnabled: _user!.vibrationEnabled,
+          age: age ?? _user!.age,
+          dob: dob ?? _user!.dob,
+          phone: phone ?? _user!.phone,
+          address: address ?? _user!.address,
         );
       }
       _isLoading = false;

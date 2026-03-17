@@ -14,6 +14,10 @@ class UserEntity {
   final String? profession;
   final String? alarmTone;
   final bool vibrationEnabled;
+  final String? age;
+  final String? dob;
+  final String? phone;
+  final String? address;
 
   const UserEntity({
     required this.id,
@@ -31,5 +35,9 @@ class UserEntity {
     this.profession,
     this.alarmTone,
     this.vibrationEnabled = true,
+    this.age,
+    this.dob,
+    this.phone,
+    this.address,
   });
 }

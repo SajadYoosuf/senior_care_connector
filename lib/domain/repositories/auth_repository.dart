@@ -14,7 +14,14 @@ abstract class AuthRepository {
     String gender, [
     String? profession,
   ]);
-  Future<void> updateUserProfile({String? name, String? gender});
+  Future<void> updateUserProfile({
+    String? name,
+    String? gender,
+    String? age,
+    String? dob,
+    String? phone,
+    String? address,
+  });
   Future<UserEntity?> signInWithGoogle([String? role]);
   Future<void> logout();
   Future<UserEntity?> getCurrentUser();

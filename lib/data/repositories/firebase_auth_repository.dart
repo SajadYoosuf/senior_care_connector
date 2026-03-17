@@ -44,6 +44,10 @@ class FirebaseAuthRepository implements AuthRepository {
             name: data['name'] ?? '',
             role: userRole,
             gender: data['gender'] ?? '',
+            age: data['age']?.toString(),
+            dob: data['dob'],
+            phone: data['phone'],
+            address: data['address'],
             alarmTone: data['alarmTone'],
             vibrationEnabled: data['vibrationEnabled'] ?? true,
           );
@@ -118,12 +122,23 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> updateUserProfile({String? name, String? gender}) async {
+  Future<void> updateUserProfile({
+    String? name,
+    String? gender,
+    String? age,
+    String? dob,
+    String? phone,
+    String? address,
+  }) async {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
       final Map<String, dynamic> updates = {};
       if (name != null) updates['name'] = name;
       if (gender != null) updates['gender'] = gender;
+      if (age != null) updates['age'] = age;
+      if (dob != null) updates['dob'] = dob;
+      if (phone != null) updates['phone'] = phone;
+      if (address != null) updates['address'] = address;
 
       if (updates.isNotEmpty) {
         await _firestore.collection('users').doc(user.uid).update(updates);
@@ -191,6 +206,16 @@ class FirebaseAuthRepository implements AuthRepository {
           gender: doc.exists
               ? (doc.data() as Map<String, dynamic>)['gender'] ?? ''
               : '',
+          age: doc.exists
+              ? (doc.data() as Map<String, dynamic>)['age']?.toString()
+              : null,
+          dob: doc.exists ? (doc.data() as Map<String, dynamic>)['dob'] : null,
+          phone: doc.exists
+              ? (doc.data() as Map<String, dynamic>)['phone']
+              : null,
+          address: doc.exists
+              ? (doc.data() as Map<String, dynamic>)['address']
+              : null,
           alarmTone: doc.exists
               ? (doc.data() as Map<String, dynamic>)['alarmTone']
               : null,
@@ -243,6 +268,10 @@ class FirebaseAuthRepository implements AuthRepository {
           name: data['name'] ?? '',
           role: role,
           gender: data['gender'] ?? '',
+          age: data['age']?.toString(),
+          dob: data['dob'],
+          phone: data['phone'],
+          address: data['address'],
           alarmTone: data['alarmTone'],
           vibrationEnabled: data['vibrationEnabled'] ?? true,
         );
