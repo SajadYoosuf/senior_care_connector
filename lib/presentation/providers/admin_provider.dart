@@ -10,6 +10,7 @@ class AdminProvider extends ChangeNotifier {
   int _pendingTaskCount = 0;
   int _completedTaskCount = 0;
   int _todayVisitCount = 0;
+  int _todayActiveUsersCount = 0;
   int _medicineReminderCount = 0;
   List<Map<String, dynamic>> _seniors = [];
   List<Map<String, dynamic>> _volunteers = [];
@@ -22,6 +23,7 @@ class AdminProvider extends ChangeNotifier {
   int get pendingTaskCount => _pendingTaskCount;
   int get completedTaskCount => _completedTaskCount;
   int get todayVisitCount => _todayVisitCount;
+  int get todayActiveUsersCount => _todayActiveUsersCount;
   int get medicineReminderCount => _medicineReminderCount;
   List<Map<String, dynamic>> get seniors => _seniors;
   List<Map<String, dynamic>> get volunteers => _volunteers;
@@ -80,13 +82,25 @@ class AdminProvider extends ChangeNotifier {
           notifyListeners();
         });
 
-    // Today's visits (Accepted status)
+    // Today's task assignments (Accepted status)
     _firestore
         .collection('help_requests')
         .where('status', isEqualTo: 'Accepted')
         .snapshots()
         .listen((snapshot) {
           _todayVisitCount = snapshot.docs.length;
+          notifyListeners();
+        });
+
+    // Today's app visits (Active Users Count based on lastActive)
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    _firestore
+        .collection('users')
+        .where('lastActive', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+        .snapshots()
+        .listen((snapshot) {
+          _todayActiveUsersCount = snapshot.docs.length;
           notifyListeners();
         });
 
@@ -109,8 +123,6 @@ class AdminProvider extends ChangeNotifier {
     });
 
     // Listen to Active SOS Alerts (Filtered by Today)
-    final now = DateTime.now();
-    final startOfToday = DateTime(now.year, now.month, now.day);
     _firestore
         .collection('sos_alerts')
         .where('status', isEqualTo: 'Active')

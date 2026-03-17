@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:app/core/app_constants.dart';
 import 'package:app/presentation/pages/admin/dashboard/admin_dashboard_screen.dart';
-import 'package:app/presentation/pages/admin/seniors/admin_seniors_screen.dart';
-import 'package:app/presentation/pages/admin/volunteers/admin_volunteers_screen.dart';
 import 'package:app/presentation/pages/admin/chat/admin_chat_list_screen.dart';
 import 'package:app/presentation/pages/admin/requests/admin_requests_screen.dart';
+import 'package:app/presentation/pages/admin/admin_users_tabs_screen.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({super.key});
@@ -16,12 +15,11 @@ class AdminMainScreen extends StatefulWidget {
 class _AdminMainScreenState extends State<AdminMainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
+  List<Widget> get _screens => [
     const AdminDashboardScreen(),
     const AdminRequestsScreen(),
-    const AdminSeniorsScreen(),
+    const AdminUsersTabsScreen(),
     const AdminChatListScreen(),
-    const AdminVolunteersScreen(),
   ];
 
   @override
@@ -48,16 +46,12 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
             label: 'Requests',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            label: 'Seniors',
+            icon: Icon(Icons.people_alt_outlined),
+            label: 'Users',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             label: 'Chatbox',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.leaderboard_outlined),
-            label: 'Volunteers',
           ),
         ],
       ),

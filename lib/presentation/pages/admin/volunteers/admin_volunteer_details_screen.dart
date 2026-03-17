@@ -187,10 +187,14 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
               spacing: 12,
               runSpacing: 12,
               children: [
-                _buildSkillTag('Medical assistance'),
-                _buildSkillTag('Driver'),
-                _buildSkillTag('CPR certified'),
-                _buildSkillTag('First Aid'),
+                if (volunteer['profession'] != null && volunteer['profession'].toString().isNotEmpty)
+                  _buildSkillTag(volunteer['profession'].toString()),
+                if (volunteer['gender'] != null && volunteer['gender'].toString().isNotEmpty)
+                  _buildSkillTag(volunteer['gender'].toString()),
+                if (volunteer['badge'] != null && volunteer['badge'] != 'None')
+                  _buildSkillTag('${volunteer['badge']} Badge'),
+                if (volunteer['completedTasks'] != null)
+                  _buildSkillTag('${volunteer['completedTasks']} Tasks Completed'),
               ],
             ),
             const SizedBox(height: 32),

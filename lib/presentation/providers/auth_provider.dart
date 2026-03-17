@@ -58,6 +58,9 @@ class AuthProvider extends ChangeNotifier {
           alarmTone: _user!.alarmTone,
           vibrationEnabled: _user!.vibrationEnabled,
         );
+        if (_isOnline) {
+          await _updateLastActive();
+        }
       } catch (e) {
         debugPrint('Error updating online status: $e');
       }
@@ -126,6 +129,7 @@ class AuthProvider extends ChangeNotifier {
         alarmTone: _user!.alarmTone,
         vibrationEnabled: _user!.vibrationEnabled,
       );
+      await _updateLastActive();
       notifyListeners();
       return true;
     } catch (e) {
@@ -151,6 +155,7 @@ class AuthProvider extends ChangeNotifier {
       if (user != null) {
         _user = user;
         await _updateFcmToken();
+        await _updateLastActive();
       }
     } catch (e) {
       debugPrint('Error loading current user: $e');
@@ -320,6 +325,7 @@ class AuthProvider extends ChangeNotifier {
       if (user != null) {
         _user = user;
         await _updateFcmToken();
+        await _updateLastActive();
         _isLoading = false;
         clearControllers();
         notifyListeners();
@@ -359,6 +365,7 @@ class AuthProvider extends ChangeNotifier {
       if (user != null) {
         _user = user;
         await _updateFcmToken();
+        await _updateLastActive();
         _isLoading = false;
         clearControllers();
         notifyListeners();
@@ -489,6 +496,7 @@ class AuthProvider extends ChangeNotifier {
       final user = await _authRepository.signInWithGoogle(role);
       if (user != null) {
         _user = user;
+        await _updateLastActive();
         _isLoading = false;
         clearControllers();
         notifyListeners();
@@ -619,6 +627,18 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('FCM Token saved to Firestore');
     } catch (e) {
       debugPrint('Error saving FCM Token: $e');
+    }
+  }
+
+  Future<void> _updateLastActive() async {
+    if (_user == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.id)
+          .update({'lastActive': FieldValue.serverTimestamp()});
+    } catch (e) {
+      debugPrint('Error updating lastActive timestamp: $e');
     }
   }
 

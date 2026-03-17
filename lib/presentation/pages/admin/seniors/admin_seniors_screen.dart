@@ -28,21 +28,7 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Seniors Management',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none, color: Colors.black),
-          ),
-        ],
-        centerTitle: true,
-      ),
+      // Remove internal app bar as it is inside a main TabBar now
       body: Column(
         children: [
           // Search Bar

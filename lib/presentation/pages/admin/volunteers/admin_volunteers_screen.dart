@@ -38,15 +38,7 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Volunteer Management',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
+      // Remove internal app bar as it is inside a main TabBar now
       body: Column(
         children: [
           // Search Bar
@@ -152,7 +144,10 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
               CircleAvatar(
                 radius: 25,
                 backgroundColor: AppColors.primary.withOpacity(0.1),
-                child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                backgroundImage: v['profileImageUrl'] != null ? NetworkImage(v['profileImageUrl']) : null,
+                child: v['profileImageUrl'] == null 
+                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))
+                  : null,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -160,7 +155,7 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text(v['email'] ?? v['phone'] ?? 'No contact info', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                    Text(v['profession']?.toString().isNotEmpty == true ? v['profession'] : 'No profession', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                   ],
                 ),
               ),
@@ -174,22 +169,31 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (!isApproved)
-                TextButton.icon(
+                ElevatedButton(
                   onPressed: () => provider.approveVolunteer(v['id']),
-                  icon: const Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
-                  label: const Text('Approve', style: TextStyle(color: Colors.green)),
-                ),
-              if (isApproved)
-                TextButton.icon(
-                  onPressed: () => provider.toggleVolunteerStatus(v['id'], !isActive),
-                  icon: Icon(isActive ? Icons.block : Icons.replay, size: 18, color: isActive ? Colors.red : Colors.orange),
-                  label: Text(isActive ? 'Deactivate' : 'Reactivate', style: TextStyle(color: isActive ? Colors.red : Colors.orange)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Approve'),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: const Text('Approved', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                 ),
               const SizedBox(width: 8),
               OutlinedButton(
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AdminVolunteerDetailsScreen(volunteer: v))),
                 style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                child: const Text('Details'),
+                child: const Text('View Profile'),
               ),
             ],
           ),
@@ -200,7 +204,7 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
 
   Widget _buildSimpleStatusBadge(bool isApproved, bool isActive) {
     String label = 'Pending';
-    Color color = Colors.orange;
+    Color color = Colors.red; // Pending is Red
     
     if (isApproved) {
       if (isActive) {
@@ -208,14 +212,14 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
         color = Colors.green;
       } else {
         label = 'Disabled';
-        color = Colors.red;
+        color = Colors.grey;
       }
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
 }
