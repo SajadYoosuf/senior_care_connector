@@ -12,6 +12,11 @@ import 'leaderboard/volunteer_leaderboard_screen.dart';
 import 'chat/volunteer_chat_list_screen.dart';
 import 'profile/volunteer_profile_screen.dart';
 
+import 'package:app/domain/entities/task_entity.dart';
+import 'package:app/presentation/providers/task_provider.dart';
+import 'package:app/presentation/pages/volunteer/tasks/volunteer_task_list_screen.dart';
+import '../../widgets/incoming_call_overlay.dart';
+
 class VolunteerMainScreen extends StatefulWidget {
   const VolunteerMainScreen({super.key});
 
@@ -33,7 +38,14 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Stack(children: [_screens[_currentIndex], _buildSOSAlertStream()]),
+      body: Stack(
+        children: [
+          _screens[_currentIndex],
+          _buildSOSAlertStream(),
+          _buildHelpRequestAlertStream(),
+          const IncomingCallOverlay(),
+        ],
+      ),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         height: 70,
@@ -137,6 +149,94 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
     );
   }
 
+  Widget _buildHelpRequestAlertStream() {
+    final user = context.watch<AuthProvider>().user;
+    if (user == null || user.latitude == null || user.longitude == null) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<List<TaskEntity>>(
+      stream: context.read<TaskProvider>().watchNearbyTasks(
+        user.latitude!,
+        user.longitude!,
+        5.0,
+        excludeUserId: user.id,
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        // Only show the most recent one if there are any
+        final latestTask = snapshot.data!.first;
+
+        return Positioned(
+          bottom: 200,
+          left: 20,
+          right: 20,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade600,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'New Request: ${latestTask.title}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'Within 5km • ${latestTask.requesterName}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VolunteerTaskListScreen(),
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    child: const Text('VIEW'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSOSAlertStream() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -153,8 +253,16 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
           return const SizedBox.shrink();
         }
 
-        final alert = snapshot.data!.docs.first.data() as Map<String, dynamic>;
-        final alertId = snapshot.data!.docs.first.id;
+        final currentUserId = context.read<AuthProvider>().user?.id;
+        final docs = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['userId'] != currentUserId;
+        }).toList();
+
+        if (docs.isEmpty) return const SizedBox.shrink();
+
+        final alert = docs.first.data() as Map<String, dynamic>;
+        final alertId = docs.first.id;
         final name = alert['userName'] ?? 'Someone';
 
         // Basic proximity check (if volunteer has location)

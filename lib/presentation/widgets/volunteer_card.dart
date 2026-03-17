@@ -95,18 +95,6 @@ class VolunteerCard extends StatelessWidget {
             children: [
               Expanded(
                 child: TextButton.icon(
-                  onPressed: onCall,
-                  icon: const Icon(Icons.call, size: 18),
-                  label: const Text('Call Now'),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    foregroundColor: AppColors.black,
-                  ),
-                ),
-              ),
-              Container(width: 1, height: 48, color: Colors.grey.shade200),
-              Expanded(
-                child: TextButton.icon(
                   onPressed: onChat,
                   icon: const Icon(Icons.message, size: 18),
                   label: const Text('Chat'),

@@ -33,12 +33,22 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchNearbyTasks(double lat, double lng, double radiusKm) async {
+  Future<void> fetchNearbyTasks(
+    double lat,
+    double lng,
+    double radiusKm, {
+    String? excludeUserId,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _nearbyTasks = await _taskRepository.getNearbyTasks(lat, lng, radiusKm);
+      _nearbyTasks = await _taskRepository.getNearbyTasks(
+        lat,
+        lng,
+        radiusKm,
+        excludeUserId: excludeUserId,
+      );
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -95,8 +105,14 @@ class TaskProvider extends ChangeNotifier {
   Stream<List<TaskEntity>> watchNearbyTasks(
     double lat,
     double lng,
-    double radiusKm,
-  ) {
-    return _taskRepository.watchNearbyTasks(lat, lng, radiusKm);
+    double radiusKm, {
+    String? excludeUserId,
+  }) {
+    return _taskRepository.watchNearbyTasks(
+      lat,
+      lng,
+      radiusKm,
+      excludeUserId: excludeUserId,
+    );
   }
 }

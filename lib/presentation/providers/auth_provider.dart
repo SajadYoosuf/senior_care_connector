@@ -64,10 +64,38 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateLocation() async {
-    if (!_isOnline || _user == null) return;
+  Future<bool> updateLocation() async {
+    if (!_isOnline || _user == null) return false;
 
     try {
+      bool serviceEnabled;
+      LocationPermission permission;
+
+      // Test if location services are enabled.
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _errorMessage = 'Location services are disabled.';
+        notifyListeners();
+        return false;
+      }
+
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _errorMessage = 'Location permissions are denied';
+          notifyListeners();
+          return false;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _errorMessage =
+            'Location permissions are permanently denied, we cannot request permissions.';
+        notifyListeners();
+        return false;
+      }
+
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -99,8 +127,12 @@ class AuthProvider extends ChangeNotifier {
         vibrationEnabled: _user!.vibrationEnabled,
       );
       notifyListeners();
+      return true;
     } catch (e) {
       debugPrint('Error updating location: $e');
+      _errorMessage = 'Error updating location: $e';
+      notifyListeners();
+      return false;
     }
   }
 

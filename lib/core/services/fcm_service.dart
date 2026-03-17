@@ -27,6 +27,8 @@ class FCMService {
     );
   }
 
+  /// Sends a notification to a specific user by looking up their FCM token
+  /// from Firestore using their [userId].
   Future<void> sendNotificationToUser({
     required String userId,
     required String title,
@@ -53,6 +55,29 @@ class FCMService {
       }
     } catch (e) {
       debugPrint('Error sending user notification: $e');
+    }
+  }
+
+  /// Sends a notification directly to a known device [token].
+  /// Use this when the FCM token is already available (e.g. from a Firestore
+  /// query result) to avoid an extra database lookup per recipient.
+  Future<void> sendNotificationToToken({
+    required String token,
+    required String title,
+    required String body,
+    Map<String, String>? data,
+    String? channelId,
+  }) async {
+    try {
+      await _send(
+        to: token,
+        title: title,
+        body: body,
+        data: data,
+        channelId: channelId,
+      );
+    } catch (e) {
+      debugPrint('Error sending token notification: $e');
     }
   }
 

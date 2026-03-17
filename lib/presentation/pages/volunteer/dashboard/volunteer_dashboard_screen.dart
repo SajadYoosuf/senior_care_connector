@@ -12,6 +12,7 @@ import '../tasks/volunteer_my_tasks_screen.dart';
 import '../../notifications/notification_screen.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 
 class VolunteerDashboardScreen extends StatelessWidget {
   const VolunteerDashboardScreen({super.key});
@@ -283,12 +284,14 @@ class VolunteerDashboardScreen extends StatelessWidget {
                   final userLat = authProvider.user?.latitude;
                   final userLng = authProvider.user?.longitude;
 
+                  // If coordinates are stored, show nearby tasks stream
                   if (userLat != null && userLng != null) {
                     return StreamBuilder<List<TaskEntity>>(
                       stream: context.read<TaskProvider>().watchNearbyTasks(
                         userLat,
                         userLng,
                         5.0,
+                        excludeUserId: authProvider.user?.id,
                       ),
                       builder: (context, snapshot) {
                         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
@@ -372,7 +375,120 @@ class VolunteerDashboardScreen extends StatelessWidget {
                       },
                     );
                   }
-                  return const SizedBox.shrink();
+
+                  // Coords not stored yet — check actual device permission
+                  return FutureBuilder<LocationPermission>(
+                    future: Geolocator.checkPermission(),
+                    builder: (context, permSnapshot) {
+                      if (!permSnapshot.hasData) {
+                        return const SizedBox.shrink();
+                      }
+
+                      final permission = permSnapshot.data!;
+                      final isDenied = permission == LocationPermission.denied ||
+                          permission == LocationPermission.deniedForever;
+
+                      // Permission already granted but coords not in Firestore yet
+                      // — silently fetch location in background
+                      if (!isDenied) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) async {
+                          final serviceEnabled =
+                              await Geolocator.isLocationServiceEnabled();
+                          if (serviceEnabled && context.mounted) {
+                            context.read<AuthProvider>().updateLocation();
+                          }
+                        });
+                        // While fetching, show nothing
+                        return const SizedBox.shrink();
+                      }
+
+                      // Location is actually OFF or denied — show the banner
+                      return FutureBuilder<bool>(
+                        future: Geolocator.isLocationServiceEnabled(),
+                        builder: (context, serviceSnapshot) {
+                          final serviceOn = serviceSnapshot.data ?? true;
+                          if (serviceOn && !isDenied) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 24),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.amber.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.location_off_rounded,
+                                  color: Colors.amber.shade800,
+                                  size: 32,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Location Required',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.amber.shade900,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Enable location to see nearby help requests.',
+                                        style: TextStyle(
+                                          color: Colors.amber.shade800,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    final success = await authProvider
+                                        .updateLocation();
+                                    if (!success && context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            authProvider.errorMessage ??
+                                                'Please enable location services',
+                                          ),
+                                          action: SnackBarAction(
+                                            label: 'Settings',
+                                            onPressed: () =>
+                                                Geolocator.openLocationSettings(),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.amber.shade700,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: const Text('Enable'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
                 },
               ),
 
@@ -681,6 +797,8 @@ class VolunteerDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildActiveSOSSection(BuildContext context) {
+    final currentUserId = context.read<AuthProvider>().user?.id;
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('sos_alerts')
@@ -696,6 +814,13 @@ class VolunteerDashboardScreen extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
+        final docs = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['userId'] != currentUserId;
+        }).toList();
+
+        if (docs.isEmpty) return const SizedBox.shrink();
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -710,7 +835,7 @@ class VolunteerDashboardScreen extends StatelessWidget {
                 ),
               ),
             ),
-            ...snapshot.data!.docs.map((doc) {
+            ...docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),

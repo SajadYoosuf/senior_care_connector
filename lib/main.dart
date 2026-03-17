@@ -112,6 +112,8 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   fcm.FirebaseMessaging.onBackgroundMessage(
     _firebaseMessagingBackgroundHandler,
   );
@@ -133,8 +135,15 @@ void main() async {
 
   // Setup FCM Foreground handling
   fcm.FirebaseMessaging.onMessage.listen((fcm.RemoteMessage message) {
-    debugPrint('Got a message whilst in the foreground!');
-    if (message.notification != null) {
+    debugPrint('Got a message whilst in the foreground: ${message.data}');
+
+    final type = message.data['type'];
+
+    if (type == 'call') {
+      // We now use IncomingCallOverlay which listens to Firestore stream
+      // This provides a much more reliable and real-time experience in-app
+      return; 
+    } else if (message.notification != null) {
       flutterLocalNotificationsPlugin.show(
         message.hashCode,
         message.notification?.title,
@@ -197,7 +206,6 @@ void main() async {
     await authProvider.loadCurrentUser();
   }
 
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   final taskRepository = FirebaseTaskRepository();
 

@@ -6,6 +6,7 @@ import 'dashboard/dashboard_screen.dart';
 import 'schedule/schedule_screen.dart';
 import 'chat/chat_list_screen.dart';
 import 'profile/profile_screen.dart';
+import '../widgets/incoming_call_overlay.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -28,7 +29,12 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true, // Allows the body to go behind the floating nav bar
-      body: _screens[_currentIndex],
+      body: Stack(
+        children: [
+          _screens[_currentIndex],
+          const IncomingCallOverlay(),
+        ],
+      ),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         height: 70,

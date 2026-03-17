@@ -3,17 +3,20 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class VideoCallScreen extends StatefulWidget {
   final String channelName;
   final String? token;
   final bool isAudioOnly;
+  final String? callerId;
 
   const VideoCallScreen({
     super.key,
     required this.channelName,
     this.token,
     this.isAudioOnly = false,
+    this.callerId,
   });
 
   @override
@@ -106,6 +109,14 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   Future<void> _dispose() async {
     await _engine.leaveChannel();
     await _engine.release();
+
+    // Clear call from firestore if it was an active call
+    if (widget.callerId != null) {
+      await FirebaseFirestore.instance
+          .collection('calls')
+          .doc(widget.callerId)
+          .delete();
+    }
   }
 
   // Create UI with local view and remote view

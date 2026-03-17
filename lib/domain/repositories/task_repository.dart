@@ -7,8 +7,9 @@ abstract class TaskRepository {
   Future<List<TaskEntity>> getNearbyTasks(
     double lat,
     double lng,
-    double radiusKm,
-  );
+    double radiusKm, {
+    String? excludeUserId,
+  });
   Future<void> acceptTask(String taskId, String volunteerId);
   Future<void> completeTask(String taskId);
   Future<List<TaskEntity>> getMyTasks(String volunteerId);
@@ -16,6 +17,7 @@ abstract class TaskRepository {
   Stream<List<TaskEntity>> watchNearbyTasks(
     double lat,
     double lng,
-    double radiusKm,
-  );
+    double radiusKm, {
+    String? excludeUserId,
+  });
 }

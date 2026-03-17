@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../domain/entities/task_entity.dart';
 import '../../domain/repositories/task_repository.dart';
@@ -24,7 +25,77 @@ class FirebaseTaskRepository implements TaskRepository {
       'requesterPhoto': task.requesterPhoto,
       'createdAt': FieldValue.serverTimestamp(),
     });
+
+    // Notify nearby online volunteers via FCM
+    if (task.latitude != null && task.longitude != null) {
+      await _notifyNearbyVolunteers(
+        taskId: docRef.id,
+        taskTitle: task.title,
+        requesterName: task.requesterName,
+        category: task.category,
+        requestLat: task.latitude!,
+        requestLng: task.longitude!,
+        radiusKm: 5.0,
+      );
+    }
+
     return docRef.id;
+  }
+
+  /// Queries all online volunteers, filters those within [radiusKm] km of the
+  /// new request, and sends an FCM push notification to each one.
+  Future<void> _notifyNearbyVolunteers({
+    required String taskId,
+    required String taskTitle,
+    required String requesterName,
+    required String category,
+    required double requestLat,
+    required double requestLng,
+    double radiusKm = 5.0,
+  }) async {
+    try {
+      // Fetch all online volunteers who have a saved location and FCM token
+      final snapshot = await _firestore
+          .collection('users')
+          .where('isOnline', isEqualTo: true)
+          .where('role', whereIn: ['volunteer', 'both'])
+          .get();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final double? volLat = (data['latitude'] as num?)?.toDouble();
+        final double? volLng = (data['longitude'] as num?)?.toDouble();
+        final String? fcmToken = data['fcmToken']?.toString();
+
+        // Skip if location or token is missing
+        if (volLat == null || volLng == null || fcmToken == null || fcmToken.isEmpty) {
+          continue;
+        }
+
+        // Calculate distance between volunteer and the new request
+        final distanceMeters = Geolocator.distanceBetween(
+          volLat,
+          volLng,
+          requestLat,
+          requestLng,
+        );
+
+        if ((distanceMeters / 1000) <= radiusKm) {
+          await FCMService.instance.sendNotificationToToken(
+            token: fcmToken,
+            title: '🆘 New Help Request Nearby',
+            body: '$requesterName needs help with "$taskTitle" ($category)',
+            data: {
+              'type': 'new_request',
+              'taskId': taskId,
+            },
+            channelId: 'sos_alerts',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error notifying nearby volunteers: $e');
+    }
   }
 
   @override
@@ -46,8 +117,9 @@ class FirebaseTaskRepository implements TaskRepository {
   Future<List<TaskEntity>> getNearbyTasks(
     double lat,
     double lng,
-    double radiusKm,
-  ) async {
+    double radiusKm, {
+    String? excludeUserId,
+  }) async {
     final snapshot = await _firestore
         .collection('help_requests')
         .where('status', isEqualTo: 'Pending')
@@ -57,6 +129,12 @@ class FirebaseTaskRepository implements TaskRepository {
 
     return allTasks.where((task) {
       if (task.latitude == null || task.longitude == null) return false;
+
+      // Filter out tasks created by the same user
+      if (excludeUserId != null && task.requesterId == excludeUserId) {
+        return false;
+      }
+
       final distance = Geolocator.distanceBetween(
         lat,
         lng,
@@ -71,26 +149,32 @@ class FirebaseTaskRepository implements TaskRepository {
   Stream<List<TaskEntity>> watchNearbyTasks(
     double lat,
     double lng,
-    double radiusKm,
-  ) {
+    double radiusKm, {
+    String? excludeUserId,
+  }) {
     return _firestore
         .collection('help_requests')
         .where('status', isEqualTo: 'Pending')
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) => _mapDocToEntity(doc)).where((task) {
-            // Legacy task protection: show it if location wasn't available
-            if (task.latitude == null || task.longitude == null) return true;
+      return snapshot.docs.map((doc) => _mapDocToEntity(doc)).where((task) {
+        // Legacy task protection: show it if location wasn't available
+        if (task.latitude == null || task.longitude == null) return false;
 
-            final distance = Geolocator.distanceBetween(
-              lat,
-              lng,
-              task.latitude!,
-              task.longitude!,
-            );
-            return (distance / 1000) <= radiusKm;
-          }).toList();
-        });
+        // Filter out tasks created by the same user
+        if (excludeUserId != null && task.requesterId == excludeUserId) {
+          return false;
+        }
+
+        final distance = Geolocator.distanceBetween(
+          lat,
+          lng,
+          task.latitude!,
+          task.longitude!,
+        );
+        return (distance / 1000) <= radiusKm;
+      }).toList();
+    });
   }
 
   @override

@@ -6,6 +6,7 @@ import '../../../../core/app_localizations.dart';
 import '../../../../domain/entities/task_entity.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/task_provider.dart';
+import 'package:geolocator/geolocator.dart';
 import 'volunteer_task_details_screen.dart';
 
 class VolunteerTaskListScreen extends StatefulWidget {
@@ -44,7 +45,10 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
         backgroundColor: Colors.grey.shade50,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _buildHelpRequestedTab(l10n),
     );
@@ -71,7 +75,23 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => authProvider.updateLocation(),
+                onPressed: () async {
+                  final success = await authProvider.updateLocation();
+                  if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          authProvider.errorMessage ??
+                              'Please enable location services',
+                        ),
+                        action: SnackBarAction(
+                          label: 'Settings',
+                          onPressed: () => Geolocator.openLocationSettings(),
+                        ),
+                      ),
+                    );
+                  }
+                },
                 child: const Text('Enable Location'),
               ),
             ],
@@ -100,6 +120,7 @@ class _VolunteerTaskListScreenState extends State<VolunteerTaskListScreen> {
               userLat,
               userLng,
               5.0,
+              excludeUserId: authProvider.user?.id,
             ),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {

@@ -323,6 +323,7 @@ class _VolunteerTaskDetailsScreenState
                       builder: (context) => VolunteerContactScreen(
                         userName: widget.task.requesterName ?? 'Senior',
                         channelName: 'task_${widget.task.id}',
+                        recipientId: widget.task.requesterId,
                         userAvatar:
                             'https://i.pravatar.cc/150?u=${widget.task.requesterId}',
                       ),

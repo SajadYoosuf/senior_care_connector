@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/app_constants.dart';
 import '../../../../agora_logic.dart';
+import '../../../../core/services/fcm_service.dart';
+import '../../../providers/auth_provider.dart';
 
 class VolunteerContactScreen extends StatelessWidget {
   final String userName;
   final String channelName;
   final String userAvatar;
+  final String recipientId;
 
   const VolunteerContactScreen({
     super.key,
     required this.userName,
     required this.channelName,
+    required this.recipientId,
     this.userAvatar = '',
   });
 
@@ -128,13 +134,45 @@ class VolunteerContactScreen extends StatelessWidget {
 
             // Main Action Button (Call)
             GestureDetector(
-              onTap: () {
+              onTap: () async {
+                final authProvider = context.read<AuthProvider>();
+                final senderName = authProvider.user?.name ?? 'Someone';
+                final senderId = authProvider.user?.id ?? '';
+
+                // 1. Write to Firestore for real-time stream alert
+                await FirebaseFirestore.instance
+                    .collection('calls')
+                    .doc(recipientId)
+                    .set({
+                  'callerId': senderId,
+                  'callerName': senderName,
+                  'channelName': channelName,
+                  'isAudioOnly': true,
+                  'status': 'ringing',
+                  'timestamp': FieldValue.serverTimestamp(),
+                });
+
+                // 2. Also send FCM as backup
+                FCMService.instance.sendNotificationToUser(
+                  userId: recipientId,
+                  title: 'Incoming Voice Call',
+                  body: '$senderName is calling you...',
+                  data: {
+                    'type': 'call',
+                    'channelName': channelName,
+                    'isAudioOnly': 'true',
+                    'senderName': senderName,
+                  },
+                  channelId: 'sos_alerts',
+                );
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => VideoCallScreen(
                       channelName: channelName,
                       isAudioOnly: true,
+                      callerId: recipientId,
                     ),
                   ),
                 );
@@ -198,13 +236,45 @@ class VolunteerContactScreen extends StatelessWidget {
                     title: 'Video Consultation',
                     subtitle: 'Face-to-face high-quality video call',
                     color: Colors.purple,
-                    onTap: () {
+                    onTap: () async {
+                      final authProvider = context.read<AuthProvider>();
+                      final senderName = authProvider.user?.name ?? 'Someone';
+                      final senderId = authProvider.user?.id ?? '';
+
+                      // 1. Write to Firestore for real-time stream alert
+                      await FirebaseFirestore.instance
+                          .collection('calls')
+                          .doc(recipientId)
+                          .set({
+                        'callerId': senderId,
+                        'callerName': senderName,
+                        'channelName': channelName,
+                        'isAudioOnly': false,
+                        'status': 'ringing',
+                        'timestamp': FieldValue.serverTimestamp(),
+                      });
+
+                      // 2. Also send FCM as backup
+                      FCMService.instance.sendNotificationToUser(
+                        userId: recipientId,
+                        title: 'Incoming Video Call',
+                        body: '$senderName is calling you...',
+                        data: {
+                          'type': 'call',
+                          'channelName': channelName,
+                          'isAudioOnly': 'false',
+                          'senderName': senderName,
+                        },
+                        channelId: 'sos_alerts',
+                      );
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => VideoCallScreen(
                             channelName: channelName,
                             isAudioOnly: false,
+                            callerId: recipientId,
                           ),
                         ),
                       );

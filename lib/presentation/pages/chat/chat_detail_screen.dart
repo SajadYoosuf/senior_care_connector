@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../../../core/app_constants.dart';
 import '../../../core/services/fcm_service.dart';
 import '../../../domain/entities/message_entity.dart';
 import '../../../agora_logic.dart';
+import '../../providers/auth_provider.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String taskId;
@@ -131,7 +133,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             position: PopupMenuPosition.under,
-            onSelected: (value) {
+            onSelected: (value) async {
+              final authProvider = context.read<AuthProvider>();
+              final senderName = authProvider.user?.name ?? 'Someone';
+              final senderId = authProvider.user?.id ?? '';
+
+              // 1. Write to Firestore for real-time stream alert
+              await FirebaseFirestore.instance
+                  .collection('calls')
+                  .doc(widget.recipientId)
+                  .set({
+                'callerId': senderId,
+                'callerName': senderName,
+                'channelName': widget.taskId,
+                'isAudioOnly': value == 'voice',
+                'status': 'ringing',
+                'timestamp': FieldValue.serverTimestamp(),
+              });
+
+              // 2. Also send FCM as backup
+              FCMService.instance.sendNotificationToUser(
+                userId: widget.recipientId,
+                title: 'Incoming ${value == 'voice' ? 'Voice' : 'Video'} Call',
+                body: '$senderName is calling you...',
+                data: {
+                  'type': 'call',
+                  'channelName': widget.taskId,
+                  'isAudioOnly': (value == 'voice').toString(),
+                  'senderName': senderName,
+                },
+                channelId: 'sos_alerts',
+              );
+
               if (value == 'voice') {
                 Navigator.push(
                   context,
@@ -139,6 +172,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     builder: (context) => VideoCallScreen(
                       channelName: widget.taskId,
                       isAudioOnly: true,
+                      callerId: widget.recipientId, // Document to clear later
                     ),
                   ),
                 );
@@ -149,6 +183,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     builder: (context) => VideoCallScreen(
                       channelName: widget.taskId,
                       isAudioOnly: false,
+                      callerId: widget.recipientId, // Document to clear later
                     ),
                   ),
                 );
