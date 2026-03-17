@@ -157,16 +157,39 @@ class VolunteerProfileScreen extends StatelessWidget {
                     side: BorderSide(color: Colors.red.shade200),
                   ),
                 ),
-                onPressed: () async {
-                  final authProvider = context.read<AuthProvider>();
-                  await authProvider.logout();
-                  if (!context.mounted) return;
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(AppLocalizations.of(context).logOut),
+                      content: const Text('Are you sure you want to log out?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(context); // Close the dialog
+                            final authProvider = context.read<AuthProvider>();
+                            await authProvider.logout();
+                            if (!context.mounted) return;
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                          child: Text(AppLocalizations.of(context).logOut),
+                        ),
+                      ],
                     ),
-                    (route) => false,
                   );
                 },
                 child: Row(
