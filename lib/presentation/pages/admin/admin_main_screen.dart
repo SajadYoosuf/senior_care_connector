@@ -4,6 +4,7 @@ import 'package:app/presentation/pages/admin/dashboard/admin_dashboard_screen.da
 import 'package:app/presentation/pages/admin/seniors/admin_seniors_screen.dart';
 import 'package:app/presentation/pages/admin/volunteers/admin_volunteers_screen.dart';
 import 'package:app/presentation/pages/admin/chat/admin_chat_list_screen.dart';
+import 'package:app/presentation/pages/admin/requests/admin_requests_screen.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({super.key});
@@ -17,6 +18,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
 
   final List<Widget> _screens = [
     const AdminDashboardScreen(),
+    const AdminRequestsScreen(),
     const AdminSeniorsScreen(),
     const AdminChatListScreen(),
     const AdminVolunteersScreen(),
@@ -40,6 +42,10 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             label: 'Stats',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined),
+            label: 'Requests',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),

@@ -26,7 +26,7 @@ class AdminLoginScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
-            key: authProvider.loginFormKey,
+            key: authProvider.adminLoginFormKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -45,16 +45,16 @@ class AdminLoginScreen extends StatelessWidget {
                 const SizedBox(height: 48),
                 CustomTextField(
                   hintText: 'Admin Email',
-                  controller: authProvider.loginEmailController,
+                  controller: authProvider.adminEmailController,
                   prefixIcon: const Icon(Icons.email_outlined),
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
                   hintText: 'Admin Password',
-                  controller: authProvider.loginPasswordController,
+                  controller: authProvider.adminPasswordController,
                   isPassword: true,
-                  obscureText: !authProvider.isLoginPasswordVisible,
-                  onPasswordToggle: authProvider.toggleLoginPasswordVisibility,
+                  obscureText: !authProvider.isAdminPasswordVisible,
+                  onPasswordToggle: authProvider.toggleAdminPasswordVisibility,
                   prefixIcon: const Icon(Icons.lock_outline),
                 ),
                 const SizedBox(height: 32),

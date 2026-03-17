@@ -1,3 +1,4 @@
+import 'package:app/core/services/fcm_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -7,20 +8,26 @@ class AdminProvider extends ChangeNotifier {
   int _seniorCount = 0;
   int _volunteerCount = 0;
   int _pendingTaskCount = 0;
+  int _completedTaskCount = 0;
   int _todayVisitCount = 0;
+  int _medicineReminderCount = 0;
   List<Map<String, dynamic>> _seniors = [];
   List<Map<String, dynamic>> _volunteers = [];
   List<Map<String, dynamic>> _activeSOSAlerts = [];
   List<Map<String, dynamic>> _recentLogs = [];
+  List<Map<String, dynamic>> _helpRequests = [];
 
   int get seniorCount => _seniorCount;
   int get volunteerCount => _volunteerCount;
   int get pendingTaskCount => _pendingTaskCount;
+  int get completedTaskCount => _completedTaskCount;
   int get todayVisitCount => _todayVisitCount;
+  int get medicineReminderCount => _medicineReminderCount;
   List<Map<String, dynamic>> get seniors => _seniors;
   List<Map<String, dynamic>> get volunteers => _volunteers;
   List<Map<String, dynamic>> get activeSOSAlerts => _activeSOSAlerts;
   List<Map<String, dynamic>> get recentLogs => _recentLogs;
+  List<Map<String, dynamic>> get helpRequests => _helpRequests;
 
   AdminProvider() {
     _initStats();
@@ -30,7 +37,7 @@ class AdminProvider extends ChangeNotifier {
     // Listen to Seniors count and list
     _firestore
         .collection('users')
-        .where('role', isEqualTo: 'senior')
+        .where('role', whereIn: ['senior', 'both'])
         .snapshots()
         .listen((snapshot) {
           _seniorCount = snapshot.docs.length;
@@ -40,10 +47,10 @@ class AdminProvider extends ChangeNotifier {
           notifyListeners();
         });
 
-    // Listen to Volunteers count and list
+    // Listen to ALL Volunteers (including both)
     _firestore
         .collection('users')
-        .where('role', isEqualTo: 'volunteer')
+        .where('role', whereIn: ['volunteer', 'both'])
         .snapshots()
         .listen((snapshot) {
           _volunteerCount = snapshot.docs.length;
@@ -63,21 +70,51 @@ class AdminProvider extends ChangeNotifier {
           notifyListeners();
         });
 
-    // Today's visits (Mock logic: count tasks created today or scheduled for today)
-    // For now, let's just count tasks updated in the last 24h as a proxy or keep it real if date field exists
+    // Listen to Completed Tasks count
+    _firestore
+        .collection('help_requests')
+        .where('status', isEqualTo: 'Completed')
+        .snapshots()
+        .listen((snapshot) {
+          _completedTaskCount = snapshot.docs.length;
+          notifyListeners();
+        });
+
+    // Today's visits (Accepted status)
     _firestore
         .collection('help_requests')
         .where('status', isEqualTo: 'Accepted')
         .snapshots()
         .listen((snapshot) {
-          _todayVisitCount = snapshot.docs.length; // Simplified for now
+          _todayVisitCount = snapshot.docs.length;
           notifyListeners();
         });
 
-    // Listen to Active SOS Alerts
+    // Listen to Help Requests List
+    _firestore
+        .collection('help_requests')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+          _helpRequests = snapshot.docs
+              .map((doc) => {'id': doc.id, ...doc.data()})
+              .toList();
+          notifyListeners();
+        });
+
+    // Listen to Medicine Reminders Count
+    _firestore.collection('medicine_reminders').snapshots().listen((snapshot) {
+      _medicineReminderCount = snapshot.docs.length;
+      notifyListeners();
+    });
+
+    // Listen to Active SOS Alerts (Filtered by Today)
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
     _firestore
         .collection('sos_alerts')
         .where('status', isEqualTo: 'Active')
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
@@ -99,5 +136,75 @@ class AdminProvider extends ChangeNotifier {
               .toList();
           notifyListeners();
         });
+  }
+
+  Future<void> approveVolunteer(String id) async {
+    await _firestore.collection('users').doc(id).update({'isApproved': true});
+    _addLog('VOLUNTEER_APPROVED', 'Approved volunteer account: $id');
+  }
+
+  Future<void> toggleVolunteerStatus(String id, bool isActive) async {
+    await _firestore.collection('users').doc(id).update({'isActive': isActive});
+    _addLog(
+      isActive ? 'VOLUNTEER_ACTIVATED' : 'VOLUNTEER_DEACTIVATED',
+      'Changed volunteer status to ${isActive ? 'Active' : 'Inactive'} for: $id',
+    );
+  }
+
+  Future<void> assignVolunteer(String requestId, String volunteerId) async {
+    try {
+      final volunteer = _volunteers.firstWhere((v) => v['id'] == volunteerId);
+      final requestDoc = await _firestore.collection('help_requests').doc(requestId).get();
+      final requestTitle = requestDoc.data()?['title'] ?? 'Help Request';
+
+      await _firestore.collection('help_requests').doc(requestId).update({
+        'status': 'Accepted',
+        'volunteerId': volunteerId,
+        'volunteerName': volunteer['name'],
+        'acceptedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Send FCM notification to the assigned volunteer
+      await FCMService.instance.sendNotificationToUser(
+        userId: volunteerId,
+        title: 'New Task Assigned',
+        body: 'An administrator has assigned you to: $requestTitle',
+        data: {
+          'type': 'task_assigned',
+          'requestId': requestId,
+        },
+      );
+
+      _addLog(
+        'TASK_ASSIGNED',
+        'Assigned volunteer ${volunteer['name']} to request $requestId',
+      );
+    } catch (e) {
+      debugPrint('Error assigning volunteer: $e');
+    }
+  }
+
+  Future<void> broadcastAlert(String title, String body) async {
+    try {
+      // Send FCM notification to 'volunteers' topic
+      await FCMService.instance.sendNotificationToTopic(
+        topic: 'volunteers',
+        title: title,
+        body: body,
+      );
+
+      await _addLog('BROADCAST_SENT', 'Broadcast: $title - $body');
+    } catch (e) {
+      debugPrint('Error broadcasting alert: $e');
+    }
+  }
+
+  Future<void> _addLog(String action, String details) async {
+    await _firestore.collection('activity_logs').add({
+      'action': action,
+      'details': details,
+      'userName': 'Admin',
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
 }

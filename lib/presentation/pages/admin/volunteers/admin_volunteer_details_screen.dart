@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/app_constants.dart';
+import '../../../providers/admin_provider.dart';
 
 class AdminVolunteerDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> volunteer;
@@ -66,33 +68,81 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
             // Action Buttons
             Row(
               children: [
-                Expanded(
-                  flex: 4,
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                if (!(volunteer['isApproved'] == true))
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.read<AdminProvider>().approveVolunteer(volunteer['id']);
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Approve Volunteer'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
                       ),
-                      elevation: 0,
                     ),
-                    child: const Text('Approve Volunteer'),
+                  )
+                else
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.read<AdminProvider>().toggleVolunteerStatus(volunteer['id'], !(volunteer['isActive'] != false));
+                        Navigator.pop(context);
+                      },
+                      icon: Icon(volunteer['isActive'] != false ? Icons.block : Icons.replay),
+                      label: Text(volunteer['isActive'] != false ? 'Deactivate Account' : 'Reactivate Account'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: volunteer['isActive'] != false ? Colors.red : Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                    ),
                   ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            // Communication Section
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Direct Communication',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildCommButton(
+                  icon: Icons.chat_bubble_outline,
+                  label: 'Chat',
+                  color: Colors.blue,
+                  onTap: () {
+                    // Navigate to ChatDetailScreen
+                  },
                 ),
-                const SizedBox(width: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Color(0xFFEFF3F8),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.chat_bubble, color: Colors.grey),
-                    padding: const EdgeInsets.all(16),
-                  ),
+                _buildCommButton(
+                  icon: Icons.phone_outlined,
+                  label: 'Voice',
+                  color: Colors.green,
+                  onTap: () {
+                    // Logic for Voice Call (Agora)
+                  },
+                ),
+                _buildCommButton(
+                  icon: Icons.video_call_outlined,
+                  label: 'Video',
+                  color: Colors.purple,
+                  onTap: () {
+                    // Logic for Video Call (Agora)
+                  },
                 ),
               ],
             ),
@@ -103,11 +153,7 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 'Contact information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
               ),
             ),
             const SizedBox(height: 16),
@@ -134,7 +180,6 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
 
             // Skills/Tags
@@ -148,42 +193,7 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
                 _buildSkillTag('First Aid'),
               ],
             ),
-
             const SizedBox(height: 32),
-
-            // Availability
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Availability',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.grey.shade100),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildDayCircle('Mon', 'M', true),
-                  _buildDayCircle('Tue', 'T', false),
-                  _buildDayCircle('Wed', 'W', true),
-                  _buildDayCircle('Thur', 'T', false),
-                  _buildDayCircle('Fri', 'F', true),
-                  _buildDayCircle('Sat', 'S', true),
-                  _buildDayCircle('Sun', 'S', false),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -247,29 +257,33 @@ class AdminVolunteerDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDayCircle(String day, String short, bool isActive) {
-    return Column(
-      children: [
-        Text(day, style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
-        const SizedBox(height: 8),
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : Colors.grey.shade100,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            short,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
+  Widget _buildCommButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
         ),
-      ],
+        child: Column(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -175,6 +175,9 @@ class AuthProvider extends ChangeNotifier {
   bool _isResetConfirmPasswordVisible = false;
   bool get isResetConfirmPasswordVisible => _isResetConfirmPasswordVisible;
 
+  bool _isAdminPasswordVisible = false;
+  bool get isAdminPasswordVisible => _isAdminPasswordVisible;
+
   void toggleLoginPasswordVisibility() {
     _isLoginPasswordVisible = !_isLoginPasswordVisible;
     notifyListeners();
@@ -200,10 +203,20 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleAdminPasswordVisibility() {
+    _isAdminPasswordVisible = !_isAdminPasswordVisible;
+    notifyListeners();
+  }
+
   // --- Login Controllers ---
   final loginEmailController = TextEditingController();
   final loginPasswordController = TextEditingController();
   final loginFormKey = GlobalKey<FormState>();
+
+  // --- Admin Login Controllers ---
+  final adminEmailController = TextEditingController();
+  final adminPasswordController = TextEditingController();
+  final adminLoginFormKey = GlobalKey<FormState>();
 
   // --- Sign Up Controllers ---
   final signUpNameController = TextEditingController();
@@ -260,12 +273,16 @@ class AuthProvider extends ChangeNotifier {
     }
     resetPasswordController.dispose();
     resetConfirmPasswordController.dispose();
+    adminEmailController.dispose();
+    adminPasswordController.dispose();
     super.dispose();
   }
 
   void clearControllers() {
     loginEmailController.clear();
     loginPasswordController.clear();
+    adminEmailController.clear();
+    adminPasswordController.clear();
     signUpNameController.clear();
     signUpEmailController.clear();
     signUpProfessionController.clear();
@@ -280,16 +297,24 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> login(String? selectedRole) async {
-    if (!loginFormKey.currentState!.validate()) return false;
+    final formKey = (selectedRole == 'admin') ? adminLoginFormKey : loginFormKey;
+    if (!formKey.currentState!.validate()) return false;
 
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
+      final email = (selectedRole == 'admin')
+          ? adminEmailController.text.trim()
+          : loginEmailController.text.trim();
+      final password = (selectedRole == 'admin')
+          ? adminPasswordController.text.trim()
+          : loginPasswordController.text.trim();
+
       final user = await _authRepository.login(
-        loginEmailController.text.trim(),
-        loginPasswordController.text.trim(),
+        email,
+        password,
         selectedRole: selectedRole,
       );
       if (user != null) {
