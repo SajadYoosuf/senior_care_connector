@@ -208,6 +208,24 @@ class FirebaseTaskRepository implements TaskRepository {
     final requesterId = data['userId'];
 
     await _firestore.runTransaction((transaction) async {
+      int prevCompletedCount = 0;
+      int prevPoints = 0;
+      DocumentReference? volunteerRef;
+      bool volunteerExists = false;
+
+      // 1. PERFORM ALL READS FIRST
+      if (volunteerId != null) {
+        volunteerRef = _firestore.collection('users').doc(volunteerId);
+        final volunteerDoc = await transaction.get(volunteerRef);
+        if (volunteerDoc.exists) {
+          volunteerExists = true;
+          final vData = volunteerDoc.data()! as Map<String, dynamic>;
+          prevCompletedCount = (vData['completedTasks'] ?? 0);
+          prevPoints = (vData['points'] ?? 0);
+        }
+      }
+
+      // 2. PERFORM ALL WRITES SECOND
       // Update Task
       transaction.update(_firestore.collection('help_requests').doc(taskId), {
         'status': 'Completed',
@@ -215,29 +233,24 @@ class FirebaseTaskRepository implements TaskRepository {
       });
 
       // Update Volunteer Rewards
-      if (volunteerId != null) {
-        final volunteerRef = _firestore.collection('users').doc(volunteerId);
-        final volunteerDoc = await transaction.get(volunteerRef);
+      if (volunteerExists && volunteerRef != null) {
+        int completedCount = prevCompletedCount + 1;
+        int points = prevPoints + 100;
 
-        if (volunteerDoc.exists) {
-          final vData = volunteerDoc.data()!;
-          int completedCount = (vData['completedTasks'] ?? 0) + 1;
-          int points = (vData['points'] ?? 0) + 100;
-
-          String badge = 'None';
-          if (completedCount >= 30)
-            badge = 'Gold';
-          else if (completedCount >= 15)
-            badge = 'Silver';
-          else if (completedCount >= 5)
-            badge = 'Bronze';
-
-          transaction.update(volunteerRef, {
-            'completedTasks': completedCount,
-            'points': points,
-            'badge': badge,
-          });
+        String badge = 'None';
+        if (completedCount >= 30) {
+          badge = 'Gold';
+        } else if (completedCount >= 15) {
+          badge = 'Silver';
+        } else if (completedCount >= 5) {
+          badge = 'Bronze';
         }
+
+        transaction.update(volunteerRef, {
+          'completedTasks': completedCount,
+          'points': points,
+          'badge': badge,
+        });
       }
     });
 

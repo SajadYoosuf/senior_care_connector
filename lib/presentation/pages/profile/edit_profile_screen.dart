@@ -160,6 +160,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: _dobController,
+                        readOnly: true,
+                        onTap: () async {
+                          DateTime initialDate = DateTime.now();
+                          if (_dobController.text.isNotEmpty) {
+                            try {
+                              initialDate = DateTime.parse(_dobController.text);
+                            } catch (e) {
+                              // Ignore and use DateTime.now()
+                            }
+                          }
+                          DateTime? pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: initialDate,
+                            firstDate: DateTime(1900),
+                            lastDate: DateTime.now(),
+                          );
+                          if (pickedDate != null) {
+                            String formattedDate = "\${pickedDate.year}-\${pickedDate.month.toString().padLeft(2, '0')}-\${pickedDate.day.toString().padLeft(2, '0')}";
+                            setState(() {
+                              _dobController.text = formattedDate;
+                            });
+                          }
+                        },
                         decoration: InputDecoration(
                           hintText: 'YYYY-MM-DD',
                           prefixIcon: const Icon(Icons.date_range),

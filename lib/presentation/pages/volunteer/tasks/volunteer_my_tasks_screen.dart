@@ -241,6 +241,8 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen> {
 
   Widget _buildStatusChip(String status) {
     Color color;
+    String displayStatus = status;
+
     switch (status.toLowerCase()) {
       case 'pending':
         color = Colors.orange;
@@ -248,10 +250,12 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen> {
       case 'accepted':
       case 'in progress':
         color = Colors.blue;
+        displayStatus = 'Not Completed';
         break;
       case 'completed':
       case 'complete':
         color = Colors.green;
+        displayStatus = 'Completed';
         break;
       default:
         color = Colors.grey;
@@ -264,7 +268,7 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen> {
         border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Text(
-        status,
+        displayStatus,
         style: TextStyle(
           color: color,
           fontSize: 11,

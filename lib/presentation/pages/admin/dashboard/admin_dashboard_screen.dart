@@ -54,14 +54,15 @@ class AdminDashboardScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () {
+              final parentContext = context;
               showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
+                context: parentContext,
+                builder: (dialogContext) => AlertDialog(
                   title: const Text('Confirm Logout'),
                   content: const Text('Are you sure you want to log out?'),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                       child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
                     ),
                     ElevatedButton(
@@ -69,16 +70,15 @@ class AdminDashboardScreen extends StatelessWidget {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                       ),
-                      onPressed: () async {
-                        Navigator.pop(context); // Close the dialog
-                        await context.read<AuthProvider>().logout();
-                        if (context.mounted) {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                            (route) => false,
-                          );
-                        }
+                      onPressed: () {
+                        Navigator.pop(dialogContext); // Close the dialog
+                        final authProvider = parentContext.read<AuthProvider>();
+                        Navigator.pushAndRemoveUntil(
+                          parentContext,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                        authProvider.logout();
                       },
                       child: const Text('Logout'),
                     ),

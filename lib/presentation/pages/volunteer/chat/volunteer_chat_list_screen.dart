@@ -46,7 +46,18 @@ class _VolunteerChatListScreenState extends State<VolunteerChatListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs;
+          final allDocs = snapshot.data!.docs;
+          final Set<String> seenUsers = {};
+          final List<QueryDocumentSnapshot> docs = [];
+
+          for (var doc in allDocs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final requesterId = data['userId'] as String? ?? '';
+            if (requesterId.isNotEmpty && !seenUsers.contains(requesterId)) {
+              seenUsers.add(requesterId);
+              docs.add(doc);
+            }
+          }
 
           if (docs.isEmpty) {
             return Center(

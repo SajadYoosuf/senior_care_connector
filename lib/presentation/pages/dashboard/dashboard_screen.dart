@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/app_constants.dart';
 import '../../../core/app_localizations.dart';
@@ -13,11 +14,137 @@ import '../medicine/medicine_reminder_screen.dart';
 import '../requests/current_requests_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../data/repositories/sos_repository.dart';
+import '../volunteer/volunteer_main_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
   static final SOSRepository _sosRepository = SOSRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForPendingFeedback();
+    });
+  }
+
+  Future<void> _checkForPendingFeedback() async {
+    final user = context.read<AuthProvider>().user;
+    if (user == null || user.role == 'volunteer') return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('help_requests')
+          .where('userId', isEqualTo: user.id)
+          .where('status', isEqualTo: 'Completed')
+          .get();
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['feedbackGiven'] != true) {
+          if (!mounted) return;
+          await _showFeedbackDialog(doc.id, data['title'] ?? 'Task', data['volunteerId']);
+          break; // Show one at a time
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking for feedback: $e');
+    }
+  }
+
+  Future<void> _showFeedbackDialog(String taskId, String taskTitle, String? volunteerId) async {
+    int rating = 5;
+    final TextEditingController feedbackController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'How was your help?',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Please rate your experience for "$taskTitle".',
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      icon: Icon(
+                        index < rating ? Icons.star : Icons.star_border,
+                        color: Colors.amber,
+                        size: 32,
+                      ),
+                      onPressed: () {
+                        setState(() => rating = index + 1);
+                      },
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: feedbackController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Leave a brief review for the volunteer...',
+                    hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Skip for now', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  try {
+                    await FirebaseFirestore.instance.collection('help_requests').doc(taskId).update({
+                      'feedbackGiven': true,
+                      'rating': rating,
+                      'feedbackText': feedbackController.text.trim(),
+                    });
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Feedback submitted. Thank you!')),
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint('Submit feedback error: $e');
+                  }
+                },
+                child: const Text('Submit', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +164,7 @@ class DashboardScreen extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 24,
+                          // ignore: deprecated_member_use
                           backgroundColor: AppColors.primary.withOpacity(0.1),
                           child: Text(
                             context
@@ -122,7 +250,8 @@ class DashboardScreen extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const NotificationScreen(),
+                                builder: (context) =>
+                                    const NotificationScreen(),
                               ),
                             );
                           },
@@ -142,7 +271,16 @@ class DashboardScreen extends StatelessWidget {
               // Role Switcher
               if (context.watch<AuthProvider>().user?.role == 'both')
                 GestureDetector(
-                  onTap: () => context.read<AuthProvider>().toggleRoleMode(),
+                  onTap: () {
+                    context.read<AuthProvider>().toggleRoleMode();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VolunteerMainScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
                   child: Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 24),
@@ -162,9 +300,9 @@ class DashboardScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.swap_horiz, color: AppColors.primary),
                         const SizedBox(width: 8),
-                        Text(
+                        const Text(
                           'Switch to Volunteer View',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 15,

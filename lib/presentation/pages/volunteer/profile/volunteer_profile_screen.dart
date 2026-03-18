@@ -6,6 +6,7 @@ import '../../login_screen.dart';
 import '../../../providers/auth_provider.dart';
 import '../../profile/edit_profile_screen.dart';
 import 'admin_chat_screen.dart';
+import 'volunteer_reviews_screen.dart';
 
 class VolunteerProfileScreen extends StatelessWidget {
   const VolunteerProfileScreen({super.key});
@@ -127,6 +128,19 @@ class VolunteerProfileScreen extends StatelessWidget {
                   ),
                   const Divider(height: 1),
                   _buildMenuItem(
+                    icon: Icons.star_border_outlined,
+                    text: 'My Reviews & Feedback',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VolunteerReviewsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  _buildMenuItem(
                     icon: Icons.help_outline,
                     text: AppLocalizations.of(context).helpSupport,
                     onTap: () {
@@ -158,14 +172,15 @@ class VolunteerProfileScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
+                  final parentContext = context;
                   showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text(AppLocalizations.of(context).logOut),
+                    context: parentContext,
+                    builder: (dialogContext) => AlertDialog(
+                      title: Text(AppLocalizations.of(parentContext).logOut),
                       content: const Text('Are you sure you want to log out?'),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pop(dialogContext),
                           child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
                         ),
                         ElevatedButton(
@@ -173,20 +188,19 @@ class VolunteerProfileScreen extends StatelessWidget {
                             backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
                           ),
-                          onPressed: () async {
-                            Navigator.pop(context); // Close the dialog
-                            final authProvider = context.read<AuthProvider>();
-                            await authProvider.logout();
-                            if (!context.mounted) return;
+                          onPressed: () {
+                            Navigator.pop(dialogContext); // Close the dialog
+                            final authProvider = parentContext.read<AuthProvider>();
                             Navigator.pushAndRemoveUntil(
-                              context,
+                              parentContext,
                               MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
+                                builder: (_) => const LoginScreen(),
                               ),
                               (route) => false,
                             );
+                            authProvider.logout();
                           },
-                          child: Text(AppLocalizations.of(context).logOut),
+                          child: Text(AppLocalizations.of(parentContext).logOut),
                         ),
                       ],
                     ),

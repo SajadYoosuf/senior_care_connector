@@ -7,12 +7,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/app_constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../domain/entities/task_entity.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 
 class AddTaskScreen extends StatefulWidget {
-  const AddTaskScreen({super.key});
+  final TaskEntity? taskToEdit;
+
+  const AddTaskScreen({super.key, this.taskToEdit});
 
   @override
   State<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -36,6 +39,22 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     'Drink Water',
     'Other',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.taskToEdit != null) {
+      _titleController.text = widget.taskToEdit!.title;
+      _notesController.text = widget.taskToEdit!.description;
+      if (_categories.contains(widget.taskToEdit!.category)) {
+        _selectedCategory = widget.taskToEdit!.category;
+      } else {
+        _selectedCategory = 'Other';
+      }
+      _selectedDate = widget.taskToEdit!.date;
+      _selectedTime = TimeOfDay.fromDateTime(widget.taskToEdit!.date);
+    }
+  }
 
   @override
   void dispose() {
@@ -122,7 +141,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         _selectedTime!.minute,
       );
 
-      String imageUrl = '';
+      String imageUrl = widget.taskToEdit?.imageUrl ?? '';
+      // Exclude fallback placeholder URL from being saved directly as base64
+      if (imageUrl.startsWith('http')) {
+        imageUrl = '';
+      }
+      
       if (_imageFile != null) {
         final bytes = await _imageFile!.readAsBytes();
         imageUrl = base64Encode(bytes);
@@ -130,7 +154,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
       // Save task locally to Hive instead of Firebase
       final box = Hive.box('tasks');
-      await box.add({
+      final taskData = {
         'userId': user.id,
         'title': _titleController.text.trim(),
         'category': _selectedCategory!,
@@ -138,9 +162,16 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         'scheduledAt': scheduledAt.toIso8601String(),
         'location': 'Current Location',
         'notes': _notesController.text.trim(),
-        'status': 'Pending',
+        'status': widget.taskToEdit?.status ?? 'Pending',
         'createdAt': DateTime.now().toIso8601String(),
-      });
+      };
+
+      if (widget.taskToEdit != null) {
+        int keyInt = int.parse(widget.taskToEdit!.id);
+        await box.put(keyInt, taskData);
+      } else {
+        await box.add(taskData);
+      }
 
       // Schedule Alarm
       final alarmSettings = AlarmSettings(
@@ -192,13 +223,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Request Submitted!',
+              'Task Saved!',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             const Text(
-              'Your request has been posted. Volunteers will see it shortly.',
+              'Your task has been saved successfully.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
@@ -255,9 +286,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Add Personal Task',
-          style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
+        title: Text(
+          widget.taskToEdit != null ? 'Edit Personal Task' : 'Add Personal Task',
+          style: const TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -470,7 +501,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       ),
                     )
                   : CustomButton(
-                      text: 'Add Task',
+                      text: widget.taskToEdit != null ? 'Update Task' : 'Add Task',
                       onPressed: _submitRequest,
                       backgroundColor: AppColors.primary,
                     ),

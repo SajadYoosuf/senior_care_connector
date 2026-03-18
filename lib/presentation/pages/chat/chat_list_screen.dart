@@ -38,11 +38,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs.where((doc) {
+          final allDocs = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             return data.containsKey('volunteerId') &&
                 data['volunteerId'] != null;
           }).toList();
+
+          final Set<String> seenVolunteers = {};
+          final List<QueryDocumentSnapshot> docs = [];
+
+          for (var doc in allDocs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final volunteerId = data['volunteerId'] as String? ?? '';
+            if (volunteerId.isNotEmpty && !seenVolunteers.contains(volunteerId)) {
+              seenVolunteers.add(volunteerId);
+              docs.add(doc);
+            }
+          }
 
           if (docs.isEmpty) {
             return Center(

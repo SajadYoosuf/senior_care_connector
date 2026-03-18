@@ -125,11 +125,6 @@ class ProfileScreen extends StatelessWidget {
               },
             ),
 
-            _buildProfileOption(
-              icon: Icons.help_outline,
-              title: AppLocalizations.of(context).helpSupport,
-              onTap: () {},
-            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -145,35 +140,41 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
+                  final parentContext = context;
                   showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text(AppLocalizations.of(context).logOut),
+                    context: parentContext,
+                    builder: (dialogContext) => AlertDialog(
+                      title: Text(AppLocalizations.of(parentContext).logOut),
                       content: const Text('Are you sure you want to log out?'),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
                           ),
-                          onPressed: () async {
-                            Navigator.pop(context); // Close the dialog
-                            final authProvider = context.read<AuthProvider>();
-                            await authProvider.logout();
-                            if (!context.mounted) return;
+                          onPressed: () {
+                            Navigator.pop(dialogContext); // Close the dialog
+                            final authProvider = parentContext.read<AuthProvider>();
                             Navigator.pushAndRemoveUntil(
-                              context,
+                              parentContext,
                               MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
+                                builder: (_) => const LoginScreen(),
                               ),
                               (route) => false,
                             );
+                            authProvider.logout();
+                            print("logout");
                           },
-                          child: Text(AppLocalizations.of(context).logOut),
+                          child: Text(
+                            AppLocalizations.of(parentContext).logOut,
+                          ),
                         ),
                       ],
                     ),

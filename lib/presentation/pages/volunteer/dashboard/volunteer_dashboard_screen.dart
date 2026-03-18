@@ -13,6 +13,7 @@ import '../../notifications/notification_screen.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../main_screen.dart';
 
 class VolunteerDashboardScreen extends StatelessWidget {
   const VolunteerDashboardScreen({super.key});
@@ -69,25 +70,6 @@ class VolunteerDashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          if (context.watch<AuthProvider>().user?.role == 'both') ...[
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: IconButton(
-                onPressed: () => context.read<AuthProvider>().toggleRoleMode(),
-                icon: const Icon(
-                  Icons.swap_horiz,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-                tooltip: 'Switch to Senior View',
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -205,7 +187,16 @@ class VolunteerDashboardScreen extends StatelessWidget {
               // Role Switcher
               if (context.watch<AuthProvider>().user?.role == 'both')
                 GestureDetector(
-                  onTap: () => context.read<AuthProvider>().toggleRoleMode(),
+                  onTap: () {
+                    context.read<AuthProvider>().toggleRoleMode();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MainScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
                   child: Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 24),
@@ -385,7 +376,8 @@ class VolunteerDashboardScreen extends StatelessWidget {
                       }
 
                       final permission = permSnapshot.data!;
-                      final isDenied = permission == LocationPermission.denied ||
+                      final isDenied =
+                          permission == LocationPermission.denied ||
                           permission == LocationPermission.deniedForever;
 
                       // Permission already granted but coords not in Firestore yet
@@ -429,7 +421,8 @@ class VolunteerDashboardScreen extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Location Required',
