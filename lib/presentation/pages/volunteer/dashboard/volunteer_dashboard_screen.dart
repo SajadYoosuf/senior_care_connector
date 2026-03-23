@@ -10,6 +10,7 @@ import '../../../providers/task_provider.dart';
 import '../tasks/volunteer_task_list_screen.dart';
 import '../tasks/volunteer_my_tasks_screen.dart';
 import '../../notifications/notification_screen.dart';
+import '../chat/volunteer_support_chat_screen.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
@@ -524,6 +525,23 @@ class VolunteerDashboardScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const VolunteerMyTasksScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildQuickActionCard(
+                icon: Icons.support_agent,
+                title: 'Help & Support',
+                subtitle: 'Chat with our admin support team',
+                iconColor: Colors.purple,
+                iconBg: Colors.purple.shade50,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const VolunteerSupportChatScreen(),
                     ),
                   );
                 },
