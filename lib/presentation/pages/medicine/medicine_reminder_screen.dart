@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:alarm/alarm.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/app_constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../../data/repositories/activity_log_repository.dart';
@@ -267,6 +268,26 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                           'volume': volume,
                         };
 
+                        // Firestore Sync
+                        final firestoreData = {
+                          ...newMap,
+                          'userId': user.id,
+                          'timestamp': FieldValue.serverTimestamp(),
+                        };
+
+                        if (existingData != null && existingData['firestoreId'] != null) {
+                          await FirebaseFirestore.instance
+                              .collection('medicine_reminders')
+                              .doc(existingData['firestoreId'])
+                              .set(firestoreData, SetOptions(merge: true));
+                          newMap['firestoreId'] = existingData['firestoreId'];
+                        } else {
+                          final docRef = await FirebaseFirestore.instance
+                              .collection('medicine_reminders')
+                              .add(firestoreData);
+                          newMap['firestoreId'] = docRef.id;
+                        }
+
                         if (existingData != null) {
                           await box.put(existingData['key'], newMap);
                         } else {
@@ -491,6 +512,15 @@ class _MedicineReminderScreenState extends State<MedicineReminderScreen> {
                                             .hashCode %
                                         100000;
                                     await Alarm.stop(id);
+                                    
+                                    // Delete from Firestore if exists
+                                    if (data['firestoreId'] != null) {
+                                      await FirebaseFirestore.instance
+                                          .collection('medicine_reminders')
+                                          .doc(data['firestoreId'])
+                                          .delete();
+                                    }
+                                    
                                     box.delete(data['key']);
                                   },
                                 ),

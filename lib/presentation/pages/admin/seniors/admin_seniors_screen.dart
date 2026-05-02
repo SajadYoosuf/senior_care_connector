@@ -22,8 +22,15 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
     // Filter logic
     final filteredSeniors = seniors.where((senior) {
       if (selectedFilter == 'All') return true;
-      return (senior['status']?.toString().toLowerCase() ?? '') ==
-          selectedFilter.toLowerCase();
+
+      // Determine dynamic status
+      final medCount = adminProvider.userMedicineCounts[senior['id']] ?? 0;
+      final hasCritical = adminProvider.userHasCriticalMeds[senior['id']] ?? false;
+      
+      String effectiveStatus = (senior['status'] ?? 'Active').toString();
+      if (medCount >= 3 || hasCritical) effectiveStatus = 'Highcare';
+
+      return effectiveStatus.toLowerCase() == selectedFilter.toLowerCase();
     }).toList();
 
     return Scaffold(
@@ -80,6 +87,13 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
                     itemCount: filteredSeniors.length,
                     itemBuilder: (context, index) {
                       final senior = filteredSeniors[index];
+                      final medCount =
+                          adminProvider.userMedicineCounts[senior['id']] ?? 0;
+                      final hasCritical = adminProvider.userHasCriticalMeds[senior['id']] ?? false;
+
+                      String status = (senior['status'] ?? 'Active').toString();
+                      if (medCount >= 3 || hasCritical) status = 'Highcare';
+
                       return _buildSeniorCard(
                         senior: senior,
                         name: senior['name'] ?? 'Unknown',
@@ -87,7 +101,9 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
                             senior['room'] ??
                             senior['address'] ??
                             'No location',
-                        status: senior['status'] ?? 'Active',
+                        status: status,
+                        medicineCount: medCount,
+                        hasCriticalMeds: hasCritical,
                       );
                     },
                   ),
@@ -127,6 +143,8 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
     required String name,
     required String location,
     required String status,
+    int medicineCount = 0,
+    bool hasCriticalMeds = false,
   }) {
     Color statusColor;
     Color statusTextColor;
@@ -169,16 +187,34 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Text(
-                name[0].toUpperCase(),
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child: Text(
+                    name[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
+                if (senior['isOnline'] == true)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -210,6 +246,29 @@ class _AdminSeniorsScreenState extends State<AdminSeniorsScreen> {
                       ),
                     ],
                   ),
+                  if (medicineCount > 0 || hasCriticalMeds) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.medication_outlined,
+                          size: 14,
+                          color: hasCriticalMeds ? Colors.red : Colors.blue,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          hasCriticalMeds 
+                            ? 'Critical Meds ($medicineCount)' 
+                            : '$medicineCount Medicines',
+                          style: TextStyle(
+                            color: hasCriticalMeds ? Colors.red : Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

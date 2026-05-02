@@ -17,6 +17,8 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _activeSOSAlerts = [];
   List<Map<String, dynamic>> _recentLogs = [];
   List<Map<String, dynamic>> _helpRequests = [];
+  Map<String, int> _userMedicineCounts = {};
+  Map<String, bool> _userHasCriticalMeds = {};
 
   int get seniorCount => _seniorCount;
   int get volunteerCount => _volunteerCount;
@@ -30,6 +32,8 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get activeSOSAlerts => _activeSOSAlerts;
   List<Map<String, dynamic>> get recentLogs => _recentLogs;
   List<Map<String, dynamic>> get helpRequests => _helpRequests;
+  Map<String, int> get userMedicineCounts => _userMedicineCounts;
+  Map<String, bool> get userHasCriticalMeds => _userHasCriticalMeds;
 
   AdminProvider() {
     _initStats();
@@ -97,7 +101,10 @@ class AdminProvider extends ChangeNotifier {
     final startOfToday = DateTime(now.year, now.month, now.day);
     _firestore
         .collection('users')
-        .where('lastActive', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+        .where(
+          'lastActive',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday),
+        )
         .snapshots()
         .listen((snapshot) {
           _todayActiveUsersCount = snapshot.docs.length;
@@ -119,6 +126,40 @@ class AdminProvider extends ChangeNotifier {
     // Listen to Medicine Reminders Count
     _firestore.collection('medicine_reminders').snapshots().listen((snapshot) {
       _medicineReminderCount = snapshot.docs.length;
+      Map<String, int> counts = {};
+      Map<String, bool> criticalMeds = {};
+
+      final highCareKeywords = [
+        'insulin',
+        'heart',
+        'bp',
+        'blood pressure',
+        'diabetes',
+        'sugar',
+        'sugar control',
+        'cancer',
+        'chemo',
+        'oxygen',
+        'cardiac',
+        'hypertension',
+        'dialysis',
+      ];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final userId = data['userId'] as String?;
+        final medName = (data['name'] ?? '').toString().toLowerCase();
+
+        if (userId != null) {
+          counts[userId] = (counts[userId] ?? 0) + 1;
+
+          if (highCareKeywords.any((k) => medName.contains(k))) {
+            criticalMeds[userId] = true;
+          }
+        }
+      }
+      _userMedicineCounts = counts;
+      _userHasCriticalMeds = criticalMeds;
       notifyListeners();
     });
 
@@ -126,7 +167,10 @@ class AdminProvider extends ChangeNotifier {
     _firestore
         .collection('sos_alerts')
         .where('status', isEqualTo: 'Active')
-        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+        .where(
+          'createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday),
+        )
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
@@ -166,7 +210,10 @@ class AdminProvider extends ChangeNotifier {
   Future<void> assignVolunteer(String requestId, String volunteerId) async {
     try {
       final volunteer = _volunteers.firstWhere((v) => v['id'] == volunteerId);
-      final requestDoc = await _firestore.collection('help_requests').doc(requestId).get();
+      final requestDoc = await _firestore
+          .collection('help_requests')
+          .doc(requestId)
+          .get();
       final requestTitle = requestDoc.data()?['title'] ?? 'Help Request';
 
       await _firestore.collection('help_requests').doc(requestId).update({
@@ -181,10 +228,7 @@ class AdminProvider extends ChangeNotifier {
         userId: volunteerId,
         title: 'New Task Assigned',
         body: 'An administrator has assigned you to: $requestTitle',
-        data: {
-          'type': 'task_assigned',
-          'requestId': requestId,
-        },
+        data: {'type': 'task_assigned', 'requestId': requestId},
       );
 
       _addLog(

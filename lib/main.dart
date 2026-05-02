@@ -14,7 +14,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart' as fcm;
 import 'firebase_options.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +30,8 @@ import 'package:app/presentation/providers/auth_provider.dart';
 import 'package:app/presentation/providers/locale_provider.dart';
 import 'package:app/presentation/providers/task_provider.dart';
 import 'package:app/presentation/providers/admin_provider.dart';
+
+
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -109,7 +110,6 @@ Future<void> _firebaseMessagingBackgroundHandler(
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

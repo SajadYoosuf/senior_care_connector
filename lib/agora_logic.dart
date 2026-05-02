@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class VideoCallScreen extends StatefulWidget {
@@ -46,7 +45,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     _engine = createAgoraRtcEngine();
     await _engine.initialize(
       RtcEngineContext(
-        appId: dotenv.env['AGORA_APP_ID'] ?? '',
+        appId:  '450e04d8431a46a49c24475661f6afbd',
         channelProfile: ChannelProfileType.channelProfileCommunication,
       ),
     );

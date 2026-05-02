@@ -17,30 +17,33 @@ class _VolunteerSupportChatScreenState
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  late String _volunteerId;
-  late String _volunteerName;
+  late String _userId;
+  late String _userName;
+  late String _userRole;
 
   @override
   void initState() {
     super.initState();
     final user = context.read<AuthProvider>().user;
-    _volunteerId = user?.id ?? '';
-    _volunteerName = user?.name ?? 'Volunteer';
+    _userId = user?.id ?? '';
+    _userName = user?.name ?? 'User';
+    _userRole = user?.role ?? 'user';
 
     // Ensure the support_chat document exists
     _initSupportChat();
   }
 
   Future<void> _initSupportChat() async {
-    if (_volunteerId.isEmpty) return;
+    if (_userId.isEmpty) return;
     final doc = FirebaseFirestore.instance
         .collection('support_chats')
-        .doc(_volunteerId);
+        .doc(_userId);
     final snap = await doc.get();
     if (!snap.exists) {
       await doc.set({
-        'volunteerId': _volunteerId,
-        'volunteerName': _volunteerName,
+        'userId': _userId,
+        'userName': _userName,
+        'userRole': _userRole,
         'lastMessage': '',
         'lastMessageTime': FieldValue.serverTimestamp(),
         'unreadByAdmin': 0,
@@ -51,26 +54,28 @@ class _VolunteerSupportChatScreenState
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _volunteerId.isEmpty) return;
+    if (text.isEmpty || _userId.isEmpty) return;
 
     _messageController.clear();
 
-    final chatDoc =
-        FirebaseFirestore.instance.collection('support_chats').doc(_volunteerId);
+    final chatDoc = FirebaseFirestore.instance
+        .collection('support_chats')
+        .doc(_userId);
 
     // Add message
     await chatDoc.collection('messages').add({
       'text': text,
-      'senderId': _volunteerId,
-      'senderName': _volunteerName,
-      'senderRole': 'volunteer',
-      'time': FieldValue.serverTimestamp(),
+      'senderId': _userId,
+      'senderName': _userName,
+      'senderRole': _userRole,
+      'timestamp': FieldValue.serverTimestamp(),
     });
 
     // Update metadata on parent doc
     await chatDoc.set({
-      'volunteerId': _volunteerId,
-      'volunteerName': _volunteerName,
+      'userId': _userId,
+      'userName': _userName,
+      'userRole': _userRole,
       'lastMessage': text,
       'lastMessageTime': FieldValue.serverTimestamp(),
       'unreadByAdmin': FieldValue.increment(1),
@@ -174,10 +179,7 @@ class _VolunteerSupportChatScreenState
                 Expanded(
                   child: Text(
                     'Send a message and our admin team will respond shortly.',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: AppColors.primary, fontSize: 12),
                   ),
                 ),
               ],
@@ -186,18 +188,21 @@ class _VolunteerSupportChatScreenState
 
           // Messages
           Expanded(
-            child: _volunteerId.isEmpty
+            child: _userId.isEmpty
                 ? const Center(child: Text('Not logged in.'))
                 : StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('support_chats')
-                        .doc(_volunteerId)
+                        .doc(_userId)
                         .collection('messages')
-                        .orderBy('time', descending: false)
+                        .orderBy('timestamp', descending: false)
                         .snapshots(),
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                      if (snapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
                       }
 
                       final docs = snapshot.data?.docs ?? [];
@@ -260,10 +265,10 @@ class _VolunteerSupportChatScreenState
                         itemBuilder: (context, index) {
                           final data =
                               docs[index].data() as Map<String, dynamic>;
-                          final isMe = data['senderId'] == _volunteerId;
+                          final isMe = data['senderRole'] == _userRole;
                           final text = data['text'] ?? '';
-                          final time =
-                              (data['time'] as Timestamp?)?.toDate();
+                          final time = (data['timestamp'] as Timestamp?)
+                              ?.toDate();
                           final senderRole =
                               data['senderRole'] ?? 'volunteer';
 
@@ -295,8 +300,9 @@ class _VolunteerSupportChatScreenState
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
@@ -305,7 +311,10 @@ class _VolunteerSupportChatScreenState
               height: 32,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primary.withOpacity(0.7),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -321,8 +330,9 @@ class _VolunteerSupportChatScreenState
           ],
           Flexible(
             child: Column(
-              crossAxisAlignment:
-                  isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: isMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -357,10 +367,7 @@ class _VolunteerSupportChatScreenState
                   const SizedBox(height: 4),
                   Text(
                     _formatTime(time),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade400,
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
                   ),
                 ],
               ],
@@ -372,9 +379,7 @@ class _VolunteerSupportChatScreenState
               radius: 16,
               backgroundColor: AppColors.primary.withOpacity(0.15),
               child: Text(
-                _volunteerName.isNotEmpty
-                    ? _volunteerName[0].toUpperCase()
-                    : 'V',
+                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
                 style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 13,
@@ -419,8 +424,10 @@ class _VolunteerSupportChatScreenState
                   hintText: 'Type your message...',
                   hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
                   border: InputBorder.none,
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -446,7 +453,11 @@ class _VolunteerSupportChatScreenState
                   ),
                 ],
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+              child: const Icon(
+                Icons.send_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ),
         ],

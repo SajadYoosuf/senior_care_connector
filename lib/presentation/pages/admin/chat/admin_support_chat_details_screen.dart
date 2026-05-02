@@ -33,7 +33,7 @@ class _AdminSupportChatDetailsScreenState
     await FirebaseFirestore.instance
         .collection('support_chats')
         .doc(widget.volunteerId)
-        .update({'unreadByAdmin': 0});
+        .set({'unreadByAdmin': 0}, SetOptions(merge: true));
   }
 
   Future<void> _sendMessage() async {
@@ -51,7 +51,8 @@ class _AdminSupportChatDetailsScreenState
       'senderId': 'admin',
       'senderName': 'Admin Support',
       'senderRole': 'admin',
-      'time': FieldValue.serverTimestamp(),
+      'isMe': true, // For admin sending, this is true
+      'timestamp': FieldValue.serverTimestamp(),
     });
 
     await chatDoc.set({
@@ -168,7 +169,7 @@ class _AdminSupportChatDetailsScreenState
                   .collection('support_chats')
                   .doc(widget.volunteerId)
                   .collection('messages')
-                  .orderBy('time', descending: false)
+                  .orderBy('timestamp', descending: false)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -235,7 +236,7 @@ class _AdminSupportChatDetailsScreenState
                     final data = docs[index].data() as Map<String, dynamic>;
                     final isAdmin = data['senderRole'] == 'admin';
                     final text = data['text'] ?? '';
-                    final time = (data['time'] as Timestamp?)?.toDate();
+                    final time = (data['timestamp'] as Timestamp?)?.toDate();
 
                     return _buildMessageBubble(
                       text: text,

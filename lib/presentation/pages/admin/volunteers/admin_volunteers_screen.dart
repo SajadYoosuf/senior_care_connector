@@ -30,8 +30,8 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
       // Status filter
       if (selectedFilter == 'All') return true;
       if (selectedFilter == 'Pending') return v['isApproved'] != true;
-      if (selectedFilter == 'Approved') return v['isApproved'] == true && v['isActive'] != false;
-      if (selectedFilter == 'Deactivated') return v['isActive'] == false;
+      if (selectedFilter == 'Active') return v['isApproved'] == true && v['isActive'] != false;
+      if (selectedFilter == 'Inactive') return v['isActive'] == false;
       
       return true;
     }).toList();
@@ -74,9 +74,9 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
                 const SizedBox(width: 8),
                 _buildFilterChip('Pending'),
                 const SizedBox(width: 8),
-                _buildFilterChip('Approved'),
+                _buildFilterChip('Active'),
                 const SizedBox(width: 8),
-                _buildFilterChip('Deactivated'),
+                _buildFilterChip('Inactive'),
               ],
             ),
           ),
@@ -141,13 +141,31 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
-                backgroundImage: v['profileImageUrl'] != null ? NetworkImage(v['profileImageUrl']) : null,
-                child: v['profileImageUrl'] == null 
-                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))
-                  : null,
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 25,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundImage: v['profileImageUrl'] != null ? NetworkImage(v['profileImageUrl']) : null,
+                    child: v['profileImageUrl'] == null 
+                      ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))
+                      : null,
+                  ),
+                  if (v['isOnline'] == true)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -211,7 +229,7 @@ class _AdminVolunteersScreenState extends State<AdminVolunteersScreen> {
         label = 'Active';
         color = Colors.green;
       } else {
-        label = 'Disabled';
+        label = 'Inactive';
         color = Colors.grey;
       }
     }

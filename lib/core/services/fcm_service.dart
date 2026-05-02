@@ -1,14 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FCMService {
   static final FCMService instance = FCMService._internal();
   FCMService._internal();
 
-  String get _serverKey => dotenv.env['FCM_SERVER_KEY'] ?? '';
+  String get _serverKey =>  'BEVVYXdxdYqn1Mfsf3_BeizBYdOYOCTFjqIHEhtCqBMAM-dOYgJwyCtcJW9GXZWhG505nYNG_3NegtrchS0IfTU';
   final String _fcmUrl = 'https://fcm.googleapis.com/fcm/send';
 
   Future<void> sendNotificationToTopic({

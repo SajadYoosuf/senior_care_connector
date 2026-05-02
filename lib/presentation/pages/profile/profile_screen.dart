@@ -6,6 +6,7 @@ import '../login_screen.dart';
 import '../../providers/auth_provider.dart';
 import 'edit_profile_screen.dart';
 import '../../../core/services/ringtone_service.dart';
+import '../volunteer/chat/volunteer_support_chat_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -24,180 +25,196 @@ class ProfileScreen extends StatelessWidget {
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  child: Text(
-                    context.watch<AuthProvider>().user?.name.isNotEmpty == true
-                        ? context
-                              .watch<AuthProvider>()
-                              .user!
-                              .name[0]
-                              .toUpperCase()
-                        : '👴',
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        child: Text(
+                          context.watch<AuthProvider>().user?.name.isNotEmpty == true
+                              ? context
+                                    .watch<AuthProvider>()
+                                    .user!
+                                    .name[0]
+                                    .toUpperCase()
+                              : '👴',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    context.watch<AuthProvider>().user?.name ?? 'Senior User',
                     style: const TextStyle(
-                      fontSize: 40,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: AppColors.black,
                     ),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              context.watch<AuthProvider>().user?.name ?? 'Senior User',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.black,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              AppLocalizations.of(context).verifiedMember,
-              style: TextStyle(fontSize: 13, color: Colors.blue.shade400),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.location_on, size: 14, color: Colors.blue.shade400),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    'Upper east side , calicut',
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(context).verifiedMember,
                     style: TextStyle(fontSize: 13, color: Colors.blue.shade400),
+                    textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            _buildProfileOption(
-              icon: Icons.person_outline,
-              title: AppLocalizations.of(context).editProfile,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const EditProfileScreen(),
-                  ),
-                );
-              },
-            ),
-
-            _buildProfileOption(
-              icon: Icons.notifications_none,
-              title: 'Notification Settings',
-              onTap: () {
-                _showNotificationSettings(context);
-              },
-            ),
-
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade50,
-                  foregroundColor: Colors.red,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.red.shade200),
-                  ),
-                ),
-                onPressed: () {
-                  final parentContext = context;
-                  showDialog(
-                    context: parentContext,
-                    builder: (dialogContext) => AlertDialog(
-                      title: Text(AppLocalizations.of(parentContext).logOut),
-                      content: const Text('Are you sure you want to log out?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.grey),
-                          ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.location_on, size: 14, color: Colors.blue.shade400),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'Upper east side , calicut',
+                          style: TextStyle(fontSize: 13, color: Colors.blue.shade400),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(dialogContext); // Close the dialog
-                            final authProvider = parentContext.read<AuthProvider>();
-                            Navigator.pushAndRemoveUntil(
-                              parentContext,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginScreen(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  _buildProfileOption(
+                    icon: Icons.person_outline,
+                    title: AppLocalizations.of(context).editProfile,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildProfileOption(
+                    icon: Icons.notifications_none,
+                    title: 'Notification Settings',
+                    onTap: () {
+                      _showNotificationSettings(context);
+                    },
+                  ),
+                  _buildProfileOption(
+                    icon: Icons.support_agent_outlined,
+                    title: 'Help & Support',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VolunteerSupportChatScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade50,
+                        foregroundColor: Colors.red,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.red.shade200),
+                        ),
+                      ),
+                      onPressed: () {
+                        final parentContext = context;
+                        showDialog(
+                          context: parentContext,
+                          builder: (dialogContext) => AlertDialog(
+                            title: Text(AppLocalizations.of(parentContext).logOut),
+                            content: const Text('Are you sure you want to log out?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                child: const Text(
+                                  'Cancel',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               ),
-                              (route) => false,
-                            );
-                            authProvider.logout();
-                            print("logout");
-                          },
-                          child: Text(
-                            AppLocalizations.of(parentContext).logOut,
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(dialogContext); // Close the dialog
+                                  final authProvider = parentContext.read<AuthProvider>();
+                                  Navigator.pushAndRemoveUntil(
+                                    parentContext,
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginScreen(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                  authProvider.logout();
+                                  print("logout");
+                                },
+                                child: Text(
+                                  AppLocalizations.of(parentContext).logOut,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.logout, size: 24),
-                    const SizedBox(width: 8),
-                    Text(
-                      AppLocalizations.of(context).logOut,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.logout, size: 24),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppLocalizations.of(context).logOut,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

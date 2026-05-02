@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'dashboard/volunteer_dashboard_screen.dart';
+import 'package:vibration/vibration.dart';
 import 'leaderboard/volunteer_leaderboard_screen.dart';
 import 'chat/volunteer_chat_list_screen.dart';
 import 'profile/volunteer_profile_screen.dart';
@@ -26,6 +27,7 @@ class VolunteerMainScreen extends StatefulWidget {
 
 class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
   int _currentIndex = 0;
+  bool _isAlarmPlaying = false;
 
   final List<Widget> _screens = [
     const VolunteerDashboardScreen(),
@@ -284,6 +286,9 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
 
         if (!isNearby) return const SizedBox.shrink();
 
+        // Trigger Alarm Sound and Vibration
+        _triggerSOSEffects();
+
         return Positioned(
           bottom: 100,
           left: 20,
@@ -348,7 +353,25 @@ class _VolunteerMainScreenState extends State<VolunteerMainScreen> {
     );
   }
 
+  void _triggerSOSEffects() async {
+    if (_isAlarmPlaying) return;
+    _isAlarmPlaying = true;
+
+    // Vibrate
+    if (await Vibration.hasVibrator()) {
+      Vibration.vibrate(
+        pattern: [500, 1000, 500, 1000, 500, 1000],
+        intensities: [128, 255, 128, 255, 128, 255],
+      );
+    }
+
+    // Note: To play a custom sound file, you would use audioplayers here.
+    // For now, we use vibration and visual pulsing.
+  }
+
   void _handleSOSResponse(String id, Map<String, dynamic> data) async {
+    _isAlarmPlaying = false;
+    Vibration.cancel();
     // Show details or navigate
     showDialog(
       context: context,
