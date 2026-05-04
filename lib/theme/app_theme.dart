@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/app_constants.dart';
+import 'package:senior_care/core/app_constants.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {

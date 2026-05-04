@@ -11,7 +11,7 @@ class AppColors {
 }
 
 class AppStrings {
-  static const String appName = 'Senior Care Connect';
+  static const String appName = 'seniorCare';
   static const String roleSelectionTitle = 'Choose your path';
   static const String loginTitle = 'Welcome Back';
   static const String signUpTitle = 'Create Account';

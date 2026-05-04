@@ -150,7 +150,7 @@ class AppLocalizations {
 
   // ─── ENGLISH ─────────────────────────────────────────────────────────────────
   static const Map<String, String> _english = {
-    'appName': 'Senior Care Connect',
+    'appName': 'seniorCare',
     'welcomeBack': 'Welcome back',
     'howCanWeHelp': 'How we can help today?',
     'selectLanguage': 'Select Language',
@@ -263,7 +263,7 @@ class AppLocalizations {
 
   // ─── MALAYALAM ────────────────────────────────────────────────────────────────
   static const Map<String, String> _malayalam = {
-    'appName': 'സീനിയർ കെയർ കണക്ട്',
+    'appName': 'seniorCare',
     'welcomeBack': 'തിരികെ സ്വാഗതം',
     'howCanWeHelp': 'ഇന്ന് ഞങ്ങൾ എങ്ങനെ സഹായിക്കാം?',
     'selectLanguage': 'ഭാഷ തിരഞ്ഞെടുക്കുക',
@@ -378,7 +378,7 @@ class AppLocalizations {
 
   // ─── TAMIL ────────────────────────────────────────────────────────────────────
   static const Map<String, String> _tamil = {
-    'appName': 'சீனியர் கேர் கனெக்ட்',
+    'appName': 'seniorCare',
     'welcomeBack': 'மீண்டும் வரவேற்கிறோம்',
     'howCanWeHelp': 'இன்று நாங்கள் எவ்வாறு உதவலாம்?',
     'selectLanguage': 'மொழியைத் தேர்ந்தெடுக்கவும்',
@@ -493,7 +493,7 @@ class AppLocalizations {
 
   // ─── HINDI ────────────────────────────────────────────────────────────────────
   static const Map<String, String> _hindi = {
-    'appName': 'सीनियर केयर कनेक्ट',
+    'appName': 'seniorCare',
     'welcomeBack': 'वापसी पर स्वागत है',
     'howCanWeHelp': 'आज हम कैसे मदद कर सकते हैं?',
     'selectLanguage': 'भाषा चुनें',

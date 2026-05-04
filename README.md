@@ -1,4 +1,4 @@
-# 👵 Senior Care Connect
+# 👵 seniorCare
 
 > **Bridging the gap between seniors and the community — with role-based care, real-time assistance, and emergency support.**
 
@@ -7,7 +7,7 @@
 ## 🌟 About the Project
 
 ### Aim
-Senior Care Connect is a mobile application that empowers senior citizens by providing them with an intuitive platform to request assistance for daily tasks and emergencies. It fosters a supportive ecosystem where seniors can maintain their independence while being seamlessly connected to a dedicated network of volunteers and caregivers.
+**seniorCare** is a mobile application that empowers senior citizens by providing them with an intuitive platform to request assistance for daily tasks and emergencies. It fosters a supportive ecosystem where seniors can maintain their independence while being seamlessly connected to a dedicated network of volunteers and caregivers.
 
 ### Reasons for Building This
 - **Ageing Population**: There is a growing need for personalized care, especially for seniors living alone without immediate family support.

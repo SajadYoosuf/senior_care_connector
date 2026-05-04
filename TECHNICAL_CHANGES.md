@@ -4,6 +4,20 @@ This document tracks the technical improvements and logic changes implemented in
 
 ---
 
+## 🏷️ Branding & Identity
+- **App Renaming**: Rebranded the application from "Senior Care Connect" to **seniorCare**.
+- **Cross-Platform Updates**: Updated app labels in `pubspec.yaml`, `AndroidManifest.xml`, and `main.dart`.
+- **AI-Generated Logo**: Created a modern, premium brand identity using AI-generated imagery.
+- **Localized Branding**: Standardized the app name across English, Malayalam, Tamil, and Hindi localizations.
+
+## 🔐 Authentication & Security
+- **Firebase Email Reset**: Replaced the manual OTP-based password reset with the built-in **Firebase Password Reset Email** feature. 
+- **Simplified Workflow**: Users now receive a secure reset link directly from Firebase. This eliminates the need for:
+  - Manual OTP generation and storage.
+  - Verification codes (OTP).
+  - Current password requirements for reset.
+- **Obsolete Cleanup**: Removed `OtpVerificationScreen`, `ResetPasswordScreen`, and related repository/provider logic to keep the codebase lean and secure.
+
 ## 🛠️ User Management & Admin Panel
 - **Seniors Filtering Logic**: Refactored `AdminSeniorsScreen` to handle null status fields. Users now default to **"Active"** in both UI cards and filter results.
 - **Volunteer Status Standardization**: Renamed labels and filters from "Approved/Deactivated" to **"Active/Inactive"** for better consistency across the admin dashboard.

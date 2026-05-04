@@ -5,31 +5,31 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:alarm/alarm.dart';
 import 'dart:async';
 
-import 'core/app_constants.dart';
-import 'core/app_localizations.dart';
-import 'theme/app_theme.dart';
+import 'package:senior_care/core/app_constants.dart';
+import 'package:senior_care/core/app_localizations.dart';
+import 'package:senior_care/theme/app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:firebase_auth/firebase_auth.dart' hide authViewModel;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart' as fcm;
-import 'firebase_options.dart';
+import 'package:senior_care/firebase_options.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app/presentation/pages/main_screen.dart';
-import 'package:app/presentation/pages/volunteer/volunteer_main_screen.dart';
-import 'package:app/presentation/pages/login_screen.dart';
-import 'package:app/presentation/pages/role_selection_screen.dart';
-import 'package:app/presentation/pages/admin/admin_main_screen.dart';
+import 'package:senior_care/views/main_screen.dart';
+import 'package:senior_care/views/volunteer/volunteer_main_screen.dart';
+import 'package:senior_care/views/login_screen.dart';
+import 'package:senior_care/views/role_selection_screen.dart';
+import 'package:senior_care/views/admin/admin_main_screen.dart';
 
 import 'package:provider/provider.dart';
-import 'package:app/data/repositories/firebase_auth_repository.dart';
-import 'package:app/data/repositories/firebase_task_repository.dart';
-import 'package:app/presentation/providers/auth_provider.dart';
-import 'package:app/presentation/providers/locale_provider.dart';
-import 'package:app/presentation/providers/task_provider.dart';
-import 'package:app/presentation/providers/admin_provider.dart';
+import 'package:senior_care/repositories/auth_repository.dart';
+import 'package:senior_care/repositories/task_repository.dart';
+import 'package:senior_care/viewmodels/auth_viewmodel.dart';
+import 'package:senior_care/viewmodels/locale_viewmodel.dart';
+import 'package:senior_care/viewmodels/task_viewmodel.dart';
+import 'package:senior_care/viewmodels/admin_viewmodel.dart';
 
 
 
@@ -201,21 +201,21 @@ void main() async {
   final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
   final String? role = prefs.getString('userRole');
 
-  final authProvider = AuthProvider(FirebaseAuthRepository());
+  final authViewModel = AuthViewModel(AuthRepository());
   if (isLoggedIn) {
-    await authProvider.loadCurrentUser();
+    await authViewModel.loadCurrentUser();
   }
 
 
-  final taskRepository = FirebaseTaskRepository();
+  final taskRepository = TaskRepository();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: authProvider),
-        ChangeNotifierProvider(create: (_) => LocaleProvider()),
-        ChangeNotifierProvider(create: (_) => TaskProvider(taskRepository)),
-        ChangeNotifierProvider(create: (_) => AdminProvider()),
+        ChangeNotifierProvider.value(value: authViewModel),
+        ChangeNotifierProvider(create: (_) => LocaleViewModel()),
+        ChangeNotifierProvider(create: (_) => TaskViewModel(taskRepository)),
+        ChangeNotifierProvider(create: (_) => AdminViewModel()),
       ],
       child: MyApp(
         isLoggedIn: isLoggedIn,
@@ -289,16 +289,16 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<LocaleProvider, AuthProvider>(
-      builder: (context, localeProvider, authProvider, child) {
+    return Consumer2<LocaleViewModel, AuthViewModel>(
+      builder: (context, localeViewModel, authViewModel, child) {
         Widget home;
 
-        if (!authProvider.isAuthenticated && !widget.isLoggedIn) {
+        if (!authViewModel.isAuthenticated && !widget.isLoggedIn) {
           home = const LoginScreen();
         } else {
-          final baseRole = authProvider.user?.role ?? widget.initialRole;
+          final baseRole = authViewModel.user?.role ?? widget.initialRole;
           final role = baseRole == 'both'
-              ? authProvider.activeRoleMode
+              ? authViewModel.activeRoleMode
               : baseRole;
 
           if (role == null || role.isEmpty) {
@@ -314,9 +314,9 @@ class _MyAppState extends State<MyApp> {
 
         return MaterialApp(
           navigatorKey: widget.navigatorKey,
-          title: AppStrings.appName,
+          title: 'seniorCare',
           theme: AppTheme.lightTheme,
-          locale: localeProvider.locale,
+          locale: localeViewModel.locale,
           supportedLocales: const [
             Locale('en'),
             Locale('ml'),

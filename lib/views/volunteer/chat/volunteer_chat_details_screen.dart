@@ -1,0 +1,447 @@
+import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:senior_care/core/app_constants.dart';
+import 'package:senior_care/models/message_entity.dart';
+import 'package:senior_care/core/services/fcm_service.dart';
+import 'package:senior_care/agora_logic.dart';
+import 'package:senior_care/viewmodels/auth_viewmodel.dart';
+
+class VolunteerChatDetailsScreen extends StatefulWidget {
+  final String taskId;
+  final String currentUserId;
+  final String userName;
+  final String userAvatar;
+  final String recipientId;
+
+  const VolunteerChatDetailsScreen({
+    super.key,
+    required this.taskId,
+    required this.currentUserId,
+    required this.userName,
+    required this.userAvatar,
+    required this.recipientId,
+  });
+
+  @override
+  State<VolunteerChatDetailsScreen> createState() =>
+      _VolunteerChatDetailsScreenState();
+}
+
+class _VolunteerChatDetailsScreenState
+    extends State<VolunteerChatDetailsScreen> {
+  final TextEditingController _messageController = TextEditingController();
+
+  void _sendMessage(String textContent) {
+    if (textContent.trim().isEmpty) return;
+
+    FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.taskId)
+        .collection('messages')
+        .add({
+          'text': textContent,
+          'senderId': widget.currentUserId,
+          'senderName': 'Me',
+          'senderAvatar': '',
+          'time': FieldValue.serverTimestamp(),
+        });
+
+    // Send FCM to recipient
+    FCMService.instance.sendNotificationToUser(
+      userId: widget.recipientId,
+      title: 'New Message',
+      body: textContent.startsWith('[IMG]') ? 'Sent an image' : textContent,
+      data: {
+        'type': 'chat',
+        'taskId': widget.taskId,
+        'senderId': widget.currentUserId,
+      },
+      channelId: 'sos_alerts',
+    );
+
+    _messageController.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.blue.shade100,
+              radius: 20,
+              child: Text(
+                widget.userName.isNotEmpty
+                    ? widget.userName[0].toUpperCase()
+                    : 'U',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.userName,
+                  style: const TextStyle(
+                    color: AppColors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Available Now',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: Container(
+          margin: const EdgeInsets.only(left: 16),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.black,
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.call, color: AppColors.primary),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            position: PopupMenuPosition.under,
+            onSelected: (value) async {
+              final authViewModel = context.read<AuthViewModel>();
+              final senderName = authViewModel.user?.name ?? 'Someone';
+              final senderId = authViewModel.user?.id ?? '';
+
+              // 1. Write to Firestore for real-time stream alert
+              await FirebaseFirestore.instance
+                  .collection('calls')
+                  .doc(widget.recipientId)
+                  .set({
+                'callerId': senderId,
+                'callerName': senderName,
+                'channelName': widget.taskId,
+                'isAudioOnly': value == 'voice',
+                'status': 'ringing',
+                'timestamp': FieldValue.serverTimestamp(),
+              });
+
+              // 2. Also send FCM as backup
+              FCMService.instance.sendNotificationToUser(
+                userId: widget.recipientId,
+                title: 'Incoming ${value == 'voice' ? 'Voice' : 'Video'} Call',
+                body: '$senderName is calling you...',
+                data: {
+                  'type': 'call',
+                  'channelName': widget.taskId,
+                  'isAudioOnly': (value == 'voice').toString(),
+                  'senderName': senderName,
+                },
+                channelId: 'sos_alerts',
+              );
+
+              if (value == 'voice') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => VideoCallScreen(
+                      channelName: widget.taskId,
+                      isAudioOnly: true,
+                      callerId: widget.recipientId, // Document to clear later
+                    ),
+                  ),
+                );
+              } else if (value == 'video') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => VideoCallScreen(
+                      channelName: widget.taskId,
+                      isAudioOnly: false,
+                      callerId: widget.recipientId, // Document to clear later
+                    ),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'voice',
+                child: Row(
+                  children: [
+                    Icon(Icons.phone_outlined, color: AppColors.primary),
+                    SizedBox(width: 12),
+                    Text('Voice Call'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'video',
+                child: Row(
+                  children: [
+                    Icon(Icons.videocam_outlined, color: AppColors.primary),
+                    SizedBox(width: 12),
+                    Text('Video Call'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 20),
+          Text(
+            'Today',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chats')
+                  .doc(widget.taskId)
+                  .collection('messages')
+                  .orderBy('time', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snapshot.data!.docs;
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No messages yet.',
+                      style: TextStyle(color: Colors.grey.shade500),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final isMe = data['senderId'] == widget.currentUserId;
+
+                    final msg = MessageEntity(
+                      id: docs[index].id,
+                      text: data['text'] ?? '',
+                      isMe: isMe,
+                      time:
+                          (data['time'] as Timestamp?)?.toDate() ??
+                          DateTime.now(),
+                      senderName: data['senderName'] ?? '',
+                      senderAvatar: data['senderAvatar'] ?? '',
+                    );
+
+                    return _buildMessageBubble(msg);
+                  },
+                );
+              },
+            ),
+          ),
+          _buildMessageInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(MessageEntity message) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        mainAxisAlignment: message.isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!message.isMe) ...[
+            CircleAvatar(
+              backgroundColor: Colors.blue.shade100,
+              radius: 16,
+              child: Text(
+                message.senderName.isNotEmpty
+                    ? message.senderName[0].toUpperCase()
+                    : 'U',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: message.isMe ? Colors.blue : Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(message.isMe ? 20 : 4),
+                  bottomRight: Radius.circular(message.isMe ? 4 : 20),
+                ),
+                boxShadow: [
+                  if (!message.isMe)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                ],
+              ),
+              child: message.text.startsWith('[IMG]')
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.memory(
+                        base64Decode(message.text.substring(5)),
+                        width: 200,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Text(
+                      message.text,
+                      style: TextStyle(
+                        color: message.isMe ? Colors.white : AppColors.black,
+                        fontSize: 16,
+                      ),
+                    ),
+            ),
+          ),
+          if (message.isMe) ...[
+            const SizedBox(width: 8),
+            const CircleAvatar(
+              backgroundColor: Colors.blue,
+              radius: 16,
+              child: Text(
+                'ME',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageInput() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.white)),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () async {
+              final ImagePicker picker = ImagePicker();
+              final XFile? image = await picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 50,
+                maxWidth: 800,
+              );
+              if (image != null) {
+                final bytes = await image.readAsBytes();
+                final base64String = base64Encode(bytes);
+                _sendMessage('[IMG]$base64String');
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.camera_alt, color: Colors.blueGrey),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              decoration: InputDecoration(
+                hintText: 'Type your message',
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white),
+              onPressed: () {
+                if (_messageController.text.isNotEmpty) {
+                  _sendMessage(_messageController.text);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
